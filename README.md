@@ -172,12 +172,6 @@ Code conventions: inline styles only (no external CSS), all shared state flows t
 
 ---
 
-## Roadmap
-
-See [FEATURES.md](./FEATURES.md) for the complete feature list and the v3.0 SaaS roadmap — cloud sync, multi-user teams, WhatsApp Business API, AI-assisted outreach, billing, and more.
-
----
-
 ## License
 
 MIT — free to use, modify, and distribute.
