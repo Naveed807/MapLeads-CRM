@@ -2,39 +2,6 @@ const PHONE_RE = /^\+?[\d][\d\s\-().]{6,20}$/;
 // Looser regex for scanning text blocks — finds phone anywhere in a string
 const PHONE_SEARCH_RE = /(\+?[\d][\d\s\-().]{6,20})/g;
 
-
-function extractPhoneFromText(text) {
-  // Match patterns like +92 333 1639081, 0333-163-9081, (021) 123-4567, etc.
-  const m = text.match(/(\+?[\d][\d\s\-().]{6,20})/);
-  if (!m) return "";
-  const digits = m[1].replace(/\D/g, "");
-  return digits.length >= 7 ? m[1].trim() : "";
-}
-
-/**
- * Search the raw pasted text for a phone number appearing within
- * ~500 characters after the business name.
- * Works because Ctrl+A on Google Maps copies both list cards AND
- * the detail-panel text (which always includes the phone number).
- */
-// function findPhoneInText(name, fullText) {
-//   const idx = fullText.indexOf(name);
-//   if (idx === -1) return "";
-//   // Search in a window after the name (up to ~500 chars covers one full entry)
-//   const window = fullText.slice(idx, idx + 500);
-//   PHONE_SEARCH_RE.lastIndex = 0;
-//   let match;
-//   while ((match = PHONE_SEARCH_RE.exec(window)) !== null) {
-//     const digits = match[1].replace(/\D/g, "");
-//     // Must have 7–15 digits and not look like a year/rating/review count
-//     if (digits.length >= 7 && digits.length <= 15) {
-//       return match[1].trim();
-//     }
-//   }
-//   return "";
-// }
-
-// Arabic Unicode range — used to detect address context
 // Arabic/Urdu/Persian Unicode range — detects address context in MENA region
 const ARABIC_RE = /[\u0600-\u06FF]/;
  
