@@ -64,13 +64,27 @@ function CellValue({ v }) {
     );
   }
   const str = String(v);
-  if (str.length > 120) {
+  const isUrl = /^https?:\/\//i.test(str);
+  if (str.length > 30 || isUrl) {
+    const preview = str.slice(0, 30) + (str.length > 30 ? "…" : "");
     return (
-      <div>
-        <button onClick={() => setOpen(o => !o)} style={{ background: "none", border: "none", cursor: "pointer", color: "#6366f1", fontSize: 11, padding: 0, textAlign: "left" }}>
-          {open ? str : str.slice(0, 120) + "…"}
-          {" "}{open ? <ChevronUp size={10} style={{ display:"inline" }} /> : <ChevronDown size={10} style={{ display:"inline" }} />}
-        </button>
+      <div style={{ maxWidth: "100%" }}>
+        {isUrl && !open ? (
+          <a href={str} target="_blank" rel="noopener noreferrer"
+            style={{ color: "#6366f1", fontSize: 11, wordBreak: "break-all", display: "block", maxWidth: "100%" }}>
+            {preview}
+          </a>
+        ) : (
+          <span style={{ fontSize: 11, wordBreak: "break-all", display: "block", maxWidth: "100%" }}>
+            {open ? str : preview}
+          </span>
+        )}
+        {str.length > 30 && (
+          <button onClick={() => setOpen(o => !o)}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", fontSize: 10, padding: "2px 0 0", display: "flex", alignItems: "center", gap: 2 }}>
+            {open ? <><ChevronUp size={10} /> less</> : <><ChevronDown size={10} /> more</>}
+          </button>
+        )}
       </div>
     );
   }

@@ -24,6 +24,7 @@ import {
 } from "../db";
 import { DEFAULT_TEMPLATE, DEFAULT_EMAIL_SUBJECT, DEFAULT_EMAIL_BODY } from "../constants";
 import { sendEmailViaEmailJS, openMailto, buildEmailBody } from "../utils/emailer";
+import { swalConfirm, toast } from "../utils/dialog";
 
 export function useAppData() {
   const [businesses,     setBusinesses]       = useState([]);
@@ -94,7 +95,13 @@ export function useAppData() {
   }, []);
 
   const handleDeleteImport = useCallback(async (historyId) => {
-    if (!window.confirm("Delete this import batch and all its businesses? This cannot be undone.")) return;
+    const ok = await swalConfirm({
+      title:       "Delete import batch?",
+      text:        "This will remove the batch and all its businesses. This cannot be undone.",
+      type:        "danger",
+      confirmText: "Yes, delete it",
+    });
+    if (!ok) return;
     await deleteImportBatch(historyId);
     const [bizList, contactMap, tagsMap, remindersMap, history] = await Promise.all([
       getAllBusinesses(), getAllContacts(), getAllTags(), getAllReminders(), getImportHistory(),
@@ -105,6 +112,7 @@ export function useAppData() {
     setReminders(remindersMap);
     setImportHistory(history);
     setSelectedBizIds(new Set());
+    toast.success("Import batch deleted.");
   }, []);
 
   const handleStatusChange = useCallback(async (bizId, status) => {
@@ -160,7 +168,13 @@ export function useAppData() {
   }, [contacts]);
 
   const handleBulkDelete = useCallback(async (ids) => {
-    if (!window.confirm(`Delete ${ids.size} selected businesses? This cannot be undone.`)) return;
+    const ok = await swalConfirm({
+      title:       `Delete ${ids.size} business${ids.size === 1 ? "" : "es"}?`,
+      text:        "This cannot be undone.",
+      type:        "danger",
+      confirmText: "Yes, delete",
+    });
+    if (!ok) return;
     const db = await initDB();
     const tx = db.transaction(["businesses", "contacts", "tags", "reminders"], "readwrite");
     await Promise.all([
@@ -178,6 +192,7 @@ export function useAppData() {
     setTagsState(tagsMap);
     setReminders(remindersMap);
     setSelectedBizIds(new Set());
+    toast.success(`${ids.size} business${ids.size === 1 ? "" : "es"} deleted.`);
   }, []);
 
   const toggleSelectBiz  = useCallback((id) => {
@@ -228,11 +243,18 @@ export function useAppData() {
   }, [emailSettings, emailSubject, emailBody, contacts]);
 
   const handleClearAll = useCallback(async () => {
-    if (!window.confirm("Clear ALL businesses and contact history? This cannot be undone.")) return;
+    const ok = await swalConfirm({
+      title:       "Clear everything?",
+      text:        "This will remove ALL businesses and contact history. This cannot be undone.",
+      type:        "danger",
+      confirmText: "Yes, clear all",
+    });
+    if (!ok) return;
     await Promise.all([clearBusinesses(), clearContacts()]);
     setBusinesses([]);
     setContacts({});
     setSelectedBizIds(new Set());
+    toast.success("All data cleared.");
   }, []);
 
   const stats = {

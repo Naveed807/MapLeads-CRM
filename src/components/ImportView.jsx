@@ -2,6 +2,7 @@
 import { parseGoogleMapsHTML } from "../utils/parseGoogleMaps";
 import { parseExcelFile, generateExcelTemplate } from "../utils/parseExcel";
 import { COUNTRY_CODES } from "../constants";
+import { toast } from "../utils/dialog";
 import {
   Upload, FileCode, X, CheckCircle, AlertCircle, History,
   Globe, Trash2, FileSpreadsheet, Download, Map,
@@ -87,6 +88,11 @@ export default function ImportView({ onImport, onDeleteImport, importHistory, co
     setLoading(false);
     setResult({ added, skipped });
     setHtml(""); setPreview(null);
+    if (added > 0) {
+      toast.success(`Imported ${added} business${added === 1 ? "" : "es"}${skipped ? ` (${skipped} skipped)` : ""}.`);
+    } else {
+      toast.warning(`No new businesses added${skipped ? ` — ${skipped} already exist` : ""}.`);
+    }
   }
 
   async function processFile(file) {
@@ -125,6 +131,11 @@ export default function ImportView({ onImport, onDeleteImport, importHistory, co
     setXlResult({ added, skipped });
     setXlFile(null); setXlPreview(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+    if (added > 0) {
+      toast.success(`Imported ${added} business${added === 1 ? "" : "es"}${skipped ? ` (${skipped} skipped)` : ""}.`);
+    } else {
+      toast.warning(`No new businesses added${skipped ? ` — ${skipped} already exist` : ""}.`);
+    }
   }
 
   return (

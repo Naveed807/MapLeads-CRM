@@ -2,6 +2,7 @@ import { useState } from "react";
 import Badge from "./Badge";
 import { STATUS_CONFIG } from "../constants";
 import { buildWhatsAppLink } from "../utils/whatsapp";
+import { toast } from "../utils/dialog";
 import {
   MessageCircle, Map, Tag, Bell, BellOff,
   ChevronDown, ChevronUp, Globe, MapPin, Clock,
@@ -80,6 +81,11 @@ export default function BusinessRow({
     setEmailSending(false);
     setEmailStatus(result);
     setTimeout(() => setEmailStatus(null), 6000);
+    if (result.ok) {
+      toast.success(result.mailto ? "Mail client opened." : "Email sent successfully!");
+    } else {
+      toast.error(result.error || "Failed to send email.");
+    }
   }
 
   const reminderDue   = reminder?.dueDate

@@ -137,7 +137,7 @@ export default function BusinessesView({
         <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
           <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: ts }} />
           <input value={search} onChange={(e) => handleSearchChange(e.target.value)}
-            placeholder="Search by name, category, addressâ€¦"
+            placeholder="Search by name, category, address"
             style={{ ...inputStyle, paddingLeft: 34, width: "100%", boxSizing: "border-box" }} />
         </div>
         <div style={{ position: "relative" }}>
@@ -242,7 +242,7 @@ export default function BusinessesView({
         <div style={{ marginTop: 24, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
           <button onClick={() => goToPage(1)} disabled={safePage === 1}
             style={{ padding: "7px 10px", borderRadius: 8, border: `1px solid ${border}`, background: surface, color: safePage === 1 ? ts : th, cursor: safePage === 1 ? "not-allowed" : "pointer", fontSize: 13, opacity: safePage === 1 ? 0.4 : 1 }}>
-            Â«
+            «
           </button>
           <button onClick={() => goToPage(safePage - 1)} disabled={safePage === 1}
             style={{ padding: "7px 10px", borderRadius: 8, border: `1px solid ${border}`, background: surface, color: safePage === 1 ? ts : th, cursor: safePage === 1 ? "not-allowed" : "pointer", display: "flex", alignItems: "center", opacity: safePage === 1 ? 0.4 : 1 }}>
@@ -253,13 +253,13 @@ export default function BusinessesView({
           {Array.from({ length: totalPages }, (_, i) => i + 1)
             .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 2)
             .reduce((acc, p, idx, arr) => {
-              if (idx > 0 && p - arr[idx - 1] > 1) acc.push("â€¦");
+              if (idx > 0 && p - arr[idx - 1] > 1) acc.push("…");
               acc.push(p);
               return acc;
             }, [])
             .map((p, i) =>
-              p === "â€¦" ? (
-                <span key={`gap-${i}`} style={{ color: ts, fontSize: 13, padding: "0 4px" }}>â€¦</span>
+              p === "…" ? (
+                <span key={`gap-${i}`} style={{ color: ts, fontSize: 13, padding: "0 4px" }}>…</span>
               ) : (
                 <button key={p} onClick={() => goToPage(p)}
                   style={{ padding: "7px 11px", borderRadius: 8, border: `1px solid ${p === safePage ? "#6366f1" : border}`, background: p === safePage ? "#6366f1" : surface, color: p === safePage ? "#fff" : th, cursor: "pointer", fontWeight: p === safePage ? 700 : 400, fontSize: 13 }}>
@@ -274,11 +274,11 @@ export default function BusinessesView({
           </button>
           <button onClick={() => goToPage(totalPages)} disabled={safePage === totalPages}
             style={{ padding: "7px 10px", borderRadius: 8, border: `1px solid ${border}`, background: surface, color: safePage === totalPages ? ts : th, cursor: safePage === totalPages ? "not-allowed" : "pointer", fontSize: 13, opacity: safePage === totalPages ? 0.4 : 1 }}>
-            Â»
+            »
           </button>
 
           <span style={{ fontSize: 12, color: ts, marginLeft: 4 }}>
-            Page {safePage} of {totalPages} Â· {filtered.length} total
+            Page {safePage} of {totalPages} · {filtered.length} total
           </span>
         </div>
       )}
