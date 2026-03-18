@@ -27,4 +27,7 @@ router.delete('/:id',          businessController.delete.bind(businessController
 router.post('/bulk/status',    planGate('canUseBulkActions'), validate(bulkStatusSchema), businessController.bulkUpdateStatus.bind(businessController));
 router.post('/bulk/delete',    planGate('canUseBulkActions'), validate(bulkDeleteSchema), businessController.bulkDelete.bind(businessController));
 
+// Clear all — not plan-gated (user deletes their own data)
+router.delete('/',             businessController.clearAll.bind(businessController));
+
 export default router;

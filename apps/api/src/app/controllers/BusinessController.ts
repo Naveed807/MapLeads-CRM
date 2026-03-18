@@ -60,6 +60,13 @@ export class BusinessController {
     } catch (e) { next(e); }
   }
 
+  async clearAll(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      await businessService.clearAll(req.org!.id);
+      res.json(ok(null, 'All businesses cleared'));
+    } catch (e) { next(e); }
+  }
+
   async getStats(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const stats = await businessService.getStats(req.org!.id);

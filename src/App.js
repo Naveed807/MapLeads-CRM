@@ -19,9 +19,10 @@ import {
   Trash2, Moon, Sun, Mail, LogOut, ShieldCheck,
   Menu, X, Zap, ChevronRight, Bell, HelpCircle,
   User, Settings, BookOpen, Video, MessageCircle as ChatIcon,
-  ExternalLink, ChevronDown, Download, Send, TrendingUp, AlertTriangle,
+  ExternalLink, ChevronDown, Download, TrendingUp, AlertTriangle,
 } from "lucide-react";
 import { useAuth } from "./context/AuthContext";
+import { notificationApi } from "./services/crmApi";
 import "./styles/auth.css";
 
 // ─── Navigation config ────────────────────────────────────────────────────────
@@ -44,13 +45,28 @@ const PAGE_TITLES = {
   email:      "Email Settings",
 };
 
-// Initial notifications — future: replace with API data
-const INITIAL_NOTIFICATIONS = [
-  { id: 1, read: false, Icon: Download,      iconCls: "text-indigo-500",  bgCls: "bg-indigo-50 dark:bg-indigo-500/10",   title: "New import completed",     body: "243 businesses added from Google Maps", time: "2 min ago" },
-  { id: 2, read: false, Icon: Send,          iconCls: "text-emerald-500", bgCls: "bg-emerald-50 dark:bg-emerald-500/10", title: "Email campaign delivered",  body: "Campaign to 58 contacts was sent",      time: "1 hr ago"  },
-  { id: 3, read: true,  Icon: TrendingUp,    iconCls: "text-violet-500",  bgCls: "bg-violet-50 dark:bg-violet-500/10",   title: "Conversion milestone",     body: "You've converted 50 leads this month!", time: "3 hr ago"  },
-  { id: 4, read: true,  Icon: AlertTriangle, iconCls: "text-amber-500",   bgCls: "bg-amber-50 dark:bg-amber-500/10",    title: "Import limit nearing",     body: "2 of 3 free imports used this month",   time: "Yesterday" },
-];
+// Map notification type → icon + colour
+function notifStyle(type) {
+  switch (type) {
+    case "IMPORT_SUCCESS":         return { Icon: Download,      iconCls: "text-emerald-500", bgCls: "bg-emerald-50 dark:bg-emerald-500/10" };
+    case "IMPORT_FAILED":          return { Icon: AlertTriangle, iconCls: "text-red-500",     bgCls: "bg-red-50 dark:bg-red-500/10" };
+    case "IMPORT_LIMIT_REACHED":   return { Icon: AlertTriangle, iconCls: "text-amber-500",   bgCls: "bg-amber-50 dark:bg-amber-500/10" };
+    case "BUSINESS_LIMIT_REACHED": return { Icon: AlertTriangle, iconCls: "text-amber-500",   bgCls: "bg-amber-50 dark:bg-amber-500/10" };
+    case "PLAN_UPGRADE_REQUIRED":  return { Icon: TrendingUp,    iconCls: "text-violet-500",  bgCls: "bg-violet-50 dark:bg-violet-500/10" };
+    default:                       return { Icon: Bell,          iconCls: "text-indigo-500",  bgCls: "bg-indigo-50 dark:bg-indigo-500/10" };
+  }
+}
+
+function relativeTime(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1)   return "just now";
+  if (mins < 60)  return `${mins} min ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24)   return `${hrs} hr ago`;
+  const days = Math.floor(hrs / 24);
+  return days === 1 ? "Yesterday" : `${days} days ago`;
+}
 
 // Dummy guide items — future: replace with API data / CMS
 const GUIDE_SECTIONS = [
@@ -124,12 +140,15 @@ function NotificationsDropdown({ notifications, setNotifications, onClose }) {
 
   function markRead(id) {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    notificationApi.markRead(id).catch(() => {});
   }
   function dismiss(id) {
     setNotifications(prev => prev.filter(n => n.id !== id));
+    notificationApi.dismiss(id).catch(() => {});
   }
   function markAllRead() {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    notificationApi.markAllRead().catch(() => {});
   }
 
   return (
@@ -148,10 +167,12 @@ function NotificationsDropdown({ notifications, setNotifications, onClose }) {
       <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700/40">
         {notifications.length === 0 ? (
           <div className="px-4 py-8 text-center text-xs text-slate-400 dark:text-slate-600">No notifications</div>
-        ) : notifications.map(n => (
+        ) : notifications.map(n => {
+          const { Icon: NIcon, iconCls, bgCls } = notifStyle(n.type);
+          return (
           <div key={n.id} className={`flex gap-3 px-4 py-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50 ${!n.read ? "bg-indigo-50/40 dark:bg-indigo-500/[0.04]" : ""}`}>
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${n.bgCls}`}>
-              <n.Icon size={14} className={n.iconCls} />
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${bgCls}`}>
+              <NIcon size={14} className={iconCls} />
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
@@ -159,7 +180,7 @@ function NotificationsDropdown({ notifications, setNotifications, onClose }) {
                 {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 flex-shrink-0" />}
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">{n.body}</p>
-              <p className="text-[10px] text-slate-400 dark:text-slate-600 mt-1">{n.time}</p>
+              <p className="text-[10px] text-slate-400 dark:text-slate-600 mt-1">{relativeTime(n.createdAt)}</p>
               <div className="flex items-center gap-3 mt-1.5">
                 {!n.read && (
                   <button
@@ -178,7 +199,8 @@ function NotificationsDropdown({ notifications, setNotifications, onClose }) {
               </div>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
       <div className="px-4 py-2.5 border-t border-slate-100 dark:border-slate-700/60 text-center">
         <button className="text-[11px] font-semibold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
@@ -303,11 +325,18 @@ function CRMApp() {
   const { tab: rawTab }                   = useParams();
   const routerNavigate                    = useNavigate();
   const tab                               = rawTab || "dashboard";
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState([]);
   const [sidebarOpen, setSidebarOpen]     = useState(false);
   const [notifOpen, setNotifOpen]     = useState(false);
   const [guideOpen, setGuideOpen]     = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+
+  // Load notifications from API
+  useEffect(() => {
+    notificationApi.list()
+      .then(data => setNotifications(data || []))
+      .catch(() => {});
+  }, []);
 
   const notifRef   = useRef(null);
   const guideRef   = useRef(null);

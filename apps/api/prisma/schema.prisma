@@ -41,6 +41,15 @@ enum SubscriptionStatus {
   INCOMPLETE
 }
 
+enum NotificationType {
+  IMPORT_SUCCESS
+  IMPORT_FAILED
+  IMPORT_LIMIT_REACHED
+  BUSINESS_LIMIT_REACHED
+  PLAN_UPGRADE_REQUIRED
+  SYSTEM
+}
+
 // ─── USERS ────────────────────────────────────────────────────────────────────
 
 model User {
@@ -83,6 +92,7 @@ model Organization {
   importBatches ImportBatch[]
   emailSetting  EmailSetting?
   emailLogs     EmailLog[]
+  notifications Notification[]
 
   @@index([slug])
 }
@@ -311,4 +321,22 @@ model EmailLog {
 
   @@index([bizId])
   @@index([orgId, sentAt])
+}
+
+// ─── NOTIFICATIONS ─────────────────────────────────────────────────────────────────
+
+model Notification {
+  id        String           @id @default(cuid())
+  type      NotificationType
+  title     String
+  body      String
+  read      Boolean          @default(false)
+  meta      Json?
+  createdAt DateTime         @default(now())
+
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, createdAt])
+  @@index([orgId, read])
 }

@@ -98,6 +98,12 @@ export class BusinessService {
     return businessRepository.getStats(orgId);
   }
 
+  /** Clear ALL businesses for an org — not plan-gated (user's own data). */
+  async clearAll(orgId: string): Promise<void> {
+    await prisma.business.deleteMany({ where: { orgId } });
+    await businessRepository.invalidateOrgCache(orgId);
+  }
+
   private assertPlanFeature(planTier: string, feature: keyof typeof PLAN_LIMITS.BASIC) {
     const limits = PLAN_LIMITS[planTier as keyof typeof PLAN_LIMITS];
     if (!limits || !limits[feature]) {

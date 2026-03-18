@@ -84,7 +84,7 @@ export default function ImportView({ onImport, onDeleteImport, importHistory, co
 
   async function handleConfirm() {
     setLoading(true);
-    const { added, skipped } = await onImport(preview);
+    const { added, skipped } = await onImport(preview, "google_maps");
     setLoading(false);
     setResult({ added, skipped });
     setHtml(""); setPreview(null);
@@ -126,7 +126,7 @@ export default function ImportView({ onImport, onDeleteImport, importHistory, co
   async function handleExcelConfirm() {
     if (!xlPreview?.businesses?.length) return;
     setXlLoading(true);
-    const { added, skipped } = await onImport(xlPreview.businesses);
+    const { added, skipped } = await onImport(xlPreview.businesses, "excel");
     setXlLoading(false);
     setXlResult({ added, skipped });
     setXlFile(null); setXlPreview(null);
