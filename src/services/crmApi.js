@@ -35,10 +35,9 @@ async function request(path, options = {}) {
   };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res  = await fetch(`${BASE}${path}`, { ...options, headers, credentials: 'include' });
-  const json = await res.json();
+  const res = await fetch(`${BASE}${path}`, { ...options, headers, credentials: 'include' });
 
-  // Token expired — silently refresh and retry once
+  // Token expired — silently refresh and retry once (check status before parsing body)
   if (res.status === 401) {
     try {
       const newToken     = await refreshAccessToken();
@@ -46,20 +45,28 @@ async function request(path, options = {}) {
       const retryRes     = await fetch(`${BASE}${path}`, { ...options, headers: retryHeaders, credentials: 'include' });
       const retryJson    = await retryRes.json();
       if (!retryJson.success) {
-        const err    = new Error(retryJson.error?.message || 'Request failed');
-        err.code     = retryJson.error?.code;
-        err.status   = retryRes.status;
-        err.details  = retryJson.error?.details;
+        const err   = new Error(retryJson.error?.message || 'Request failed');
+        err.code    = retryJson.error?.code;
+        err.status  = retryRes.status;
+        err.details = retryJson.error?.details;
         throw err;
       }
       return retryJson.data;
-    } catch (refreshErr) {
+    } catch {
       // Refresh token also expired — clear session and redirect to login
       localStorage.removeItem('mapleads_token');
       localStorage.removeItem('mapleads_user');
       window.location.href = '/';
       throw new Error('Session expired. Please log in again.');
     }
+  }
+
+  // Parse JSON safely — guard against non-JSON error responses
+  let json;
+  try {
+    json = await res.json();
+  } catch {
+    throw new Error(`Server error (${res.status})`);
   }
 
   if (!json.success) {
