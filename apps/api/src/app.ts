@@ -14,7 +14,12 @@ export function createApp(): Application {
   // ── Security headers ────────────────────────────────────────────────────
   app.use(helmet());
   app.use(cors({
-    origin:      config.frontendUrl,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, curl, server-to-server)
+      if (!origin) return callback(null, true);
+      if (config.allowedOrigins.includes(origin)) return callback(null, true);
+      callback(new Error(`CORS: origin ${origin} not allowed`));
+    },
     credentials: true,
     methods:     ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   }));
