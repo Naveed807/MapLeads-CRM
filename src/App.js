@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute, GuestRoute } from "./components/ProtectedRoute";
 import LoginPage          from "./pages/LoginPage";
@@ -8,7 +8,7 @@ import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage  from "./pages/ResetPasswordPage";
 import AdminLoginPage     from "./pages/AdminLoginPage";
 import { useAppData } from "./hooks/useAppData";
-import { COUNTRY_CODES } from "./constants";
+
 import Dashboard         from "./components/Dashboard";
 import BusinessesView    from "./components/BusinessesView";
 import ImportView        from "./components/ImportView";
@@ -16,10 +16,10 @@ import TemplateView      from "./components/TemplateView";
 import EmailSettingsView from "./components/EmailSettingsView";
 import {
   LayoutDashboard, Building2, Upload, MessageSquare,
-  Trash2, Moon, Sun, Globe, Mail, LogOut, ShieldCheck,
+  Trash2, Moon, Sun, Mail, LogOut, ShieldCheck,
   Menu, X, Zap, ChevronRight, Bell, HelpCircle,
   User, Settings, BookOpen, Video, MessageCircle as ChatIcon,
-  ExternalLink, ChevronDown,
+  ExternalLink, ChevronDown, Download, Send, TrendingUp, AlertTriangle,
 } from "lucide-react";
 import { useAuth } from "./context/AuthContext";
 import "./styles/auth.css";
@@ -44,12 +44,12 @@ const PAGE_TITLES = {
   email:      "Email Settings",
 };
 
-// Dummy notifications — future: replace with API data
-const DUMMY_NOTIFICATIONS = [
-  { id: 1, read: false, icon: "🔔", title: "New import completed",        body: "243 businesses added from Google Maps",  time: "2 min ago" },
-  { id: 2, read: false, icon: "✉️", title: "Email campaign delivered",    body: "Campaign to 58 contacts was sent",       time: "1 hr ago"  },
-  { id: 3, read: true,  icon: "🎯", title: "Conversion milestone",        body: "You've converted 50 leads this month!",  time: "3 hr ago"  },
-  { id: 4, read: true,  icon: "⚠️", title: "Import limit nearing",        body: "2 of 3 free imports used this month",    time: "Yesterday" },
+// Initial notifications — future: replace with API data
+const INITIAL_NOTIFICATIONS = [
+  { id: 1, read: false, Icon: Download,      iconCls: "text-indigo-500",  bgCls: "bg-indigo-50 dark:bg-indigo-500/10",   title: "New import completed",     body: "243 businesses added from Google Maps", time: "2 min ago" },
+  { id: 2, read: false, Icon: Send,          iconCls: "text-emerald-500", bgCls: "bg-emerald-50 dark:bg-emerald-500/10", title: "Email campaign delivered",  body: "Campaign to 58 contacts was sent",      time: "1 hr ago"  },
+  { id: 3, read: true,  Icon: TrendingUp,    iconCls: "text-violet-500",  bgCls: "bg-violet-50 dark:bg-violet-500/10",   title: "Conversion milestone",     body: "You've converted 50 leads this month!", time: "3 hr ago"  },
+  { id: 4, read: true,  Icon: AlertTriangle, iconCls: "text-amber-500",   bgCls: "bg-amber-50 dark:bg-amber-500/10",    title: "Import limit nearing",     body: "2 of 3 free imports used this month",   time: "Yesterday" },
 ];
 
 // Dummy guide items — future: replace with API data / CMS
@@ -119,8 +119,19 @@ function SidebarNavItem({ id, label, Icon, badge, active, onSelect }) {
 }
 
 // ─── Notifications dropdown ──────────────────────────────────────────────────
-function NotificationsDropdown({ onClose }) {
-  const unread = DUMMY_NOTIFICATIONS.filter(n => !n.read).length;
+function NotificationsDropdown({ notifications, setNotifications, onClose }) {
+  const unread = notifications.filter(n => !n.read).length;
+
+  function markRead(id) {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+  }
+  function dismiss(id) {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  }
+  function markAllRead() {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  }
+
   return (
     <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl shadow-black/10 dark:shadow-black/40 overflow-hidden z-50">
       <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-700/60">
@@ -130,21 +141,41 @@ function NotificationsDropdown({ onClose }) {
             <span className="text-[11px] font-bold bg-indigo-500 text-white px-1.5 py-0.5 rounded-full">{unread}</span>
           )}
         </div>
-        <button className="text-[11px] font-semibold text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors">
+        <button onClick={markAllRead} className="text-[11px] font-semibold text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors">
           Mark all read
         </button>
       </div>
       <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700/40">
-        {DUMMY_NOTIFICATIONS.map(n => (
+        {notifications.length === 0 ? (
+          <div className="px-4 py-8 text-center text-xs text-slate-400 dark:text-slate-600">No notifications</div>
+        ) : notifications.map(n => (
           <div key={n.id} className={`flex gap-3 px-4 py-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50 ${!n.read ? "bg-indigo-50/40 dark:bg-indigo-500/[0.04]" : ""}`}>
-            <span className="text-lg flex-shrink-0 mt-0.5">{n.icon}</span>
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${n.bgCls}`}>
+              <n.Icon size={14} className={n.iconCls} />
+            </div>
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">{n.title}</p>
                 {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 flex-shrink-0" />}
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">{n.body}</p>
               <p className="text-[10px] text-slate-400 dark:text-slate-600 mt-1">{n.time}</p>
+              <div className="flex items-center gap-3 mt-1.5">
+                {!n.read && (
+                  <button
+                    onClick={() => markRead(n.id)}
+                    className="text-[10px] font-semibold text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+                  >
+                    Mark as read
+                  </button>
+                )}
+                <button
+                  onClick={() => dismiss(n.id)}
+                  className="text-[10px] font-semibold text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                >
+                  Dismiss
+                </button>
+              </div>
             </div>
           </div>
         ))}
@@ -268,9 +299,12 @@ export default function App() {
 
 // ─── CRM shell ────────────────────────────────────────────────────────────────
 function CRMApp() {
-  const { user, logout, isAdmin } = useAuth();
-  const [tab, setTab]                 = useState("dashboard");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { user, logout, isAdmin }         = useAuth();
+  const { tab: rawTab }                   = useParams();
+  const routerNavigate                    = useNavigate();
+  const tab                               = rawTab || "dashboard";
+  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+  const [sidebarOpen, setSidebarOpen]     = useState(false);
   const [notifOpen, setNotifOpen]     = useState(false);
   const [guideOpen, setGuideOpen]     = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -325,7 +359,7 @@ function CRMApp() {
   const dark = darkMode;
 
   function navigate(nextTab) {
-    setTab(nextTab);
+    routerNavigate(nextTab === "dashboard" ? "/dashboard" : `/dashboard/${nextTab}`);
     setSidebarOpen(false);
   }
 
@@ -343,7 +377,7 @@ function CRMApp() {
 
   const bizCount     = businesses.length;
   const avatarLetter = (user?.name || user?.email || "U")[0].toUpperCase();
-  const unreadCount  = DUMMY_NOTIFICATIONS.filter(n => !n.read).length;
+  const unreadCount  = notifications.filter(n => !n.read).length;
 
   // ── Sidebar content ─────────────────────────────────────────────────────────
   const sidebarContent = (
@@ -482,18 +516,6 @@ function CRMApp() {
               </button>
             )}
 
-            {/* Country code */}
-            <div className="flex items-center gap-1.5 mr-1">
-              <Globe size={13} className="text-slate-400 flex-shrink-0" />
-              <select
-                value={countryCode}
-                onChange={(e) => handleCountryCodeChange(e.target.value)}
-                className="text-xs bg-transparent border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 rounded-lg px-2 py-1.5 outline-none cursor-pointer hover:border-slate-300 dark:hover:border-slate-600 focus:ring-2 focus:ring-indigo-500/20 transition-all max-w-[110px]"
-              >
-                {COUNTRY_CODES.map((c) => <option key={c.code} value={c.code}>{c.label}</option>)}
-              </select>
-            </div>
-
             {/* Dark mode toggle */}
             <button
               onClick={toggleDarkMode}
@@ -518,7 +540,7 @@ function CRMApp() {
                   <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-indigo-500 ring-2 ring-white dark:ring-slate-900" />
                 )}
               </button>
-              {notifOpen && <NotificationsDropdown onClose={() => setNotifOpen(false)} />}
+              {notifOpen && <NotificationsDropdown notifications={notifications} setNotifications={setNotifications} onClose={() => setNotifOpen(false)} />}
             </div>
 
             {/* Help / Guide */}
