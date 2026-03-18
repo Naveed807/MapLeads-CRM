@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute, GuestRoute } from "./components/ProtectedRoute";
@@ -13,12 +13,13 @@ import Dashboard         from "./components/Dashboard";
 import BusinessesView    from "./components/BusinessesView";
 import ImportView        from "./components/ImportView";
 import TemplateView      from "./components/TemplateView";
-import DataView          from "./components/DataView";
 import EmailSettingsView from "./components/EmailSettingsView";
 import {
-  LayoutDashboard, Building2, Upload, MessageSquare, Database,
+  LayoutDashboard, Building2, Upload, MessageSquare,
   Trash2, Moon, Sun, Globe, Mail, LogOut, ShieldCheck,
-  Menu, X, Zap, ChevronRight,
+  Menu, X, Zap, ChevronRight, Bell, HelpCircle,
+  User, Settings, BookOpen, Video, MessageCircle as ChatIcon,
+  ExternalLink, ChevronDown,
 } from "lucide-react";
 import { useAuth } from "./context/AuthContext";
 import "./styles/auth.css";
@@ -28,7 +29,6 @@ const MAIN_NAV = [
   { id: "dashboard",  label: "Dashboard",  Icon: LayoutDashboard },
   { id: "businesses", label: "Businesses", Icon: Building2 },
   { id: "import",     label: "Import",     Icon: Upload },
-  { id: "data",       label: "DB Records", Icon: Database },
 ];
 
 const SETTINGS_NAV = [
@@ -40,10 +40,54 @@ const PAGE_TITLES = {
   dashboard:  "Dashboard",
   businesses: "Businesses",
   import:     "Import",
-  data:       "DB Records",
   template:   "Templates",
   email:      "Email Settings",
 };
+
+// Dummy notifications — future: replace with API data
+const DUMMY_NOTIFICATIONS = [
+  { id: 1, read: false, icon: "🔔", title: "New import completed",        body: "243 businesses added from Google Maps",  time: "2 min ago" },
+  { id: 2, read: false, icon: "✉️", title: "Email campaign delivered",    body: "Campaign to 58 contacts was sent",       time: "1 hr ago"  },
+  { id: 3, read: true,  icon: "🎯", title: "Conversion milestone",        body: "You've converted 50 leads this month!",  time: "3 hr ago"  },
+  { id: 4, read: true,  icon: "⚠️", title: "Import limit nearing",        body: "2 of 3 free imports used this month",    time: "Yesterday" },
+];
+
+// Dummy guide items — future: replace with API data / CMS
+const GUIDE_SECTIONS = [
+  {
+    heading: "Getting Started",
+    items: [
+      { Icon: BookOpen,     label: "Quick Start Guide",         desc: "Learn the basics in 5 minutes"     },
+      { Icon: Video,        label: "Video Walkthrough",         desc: "Watch a full product tour"          },
+    ],
+  },
+  {
+    heading: "Features",
+    items: [
+      { Icon: Upload,       label: "Importing from Google Maps", desc: "Paste a Maps URL and hit import"   },
+      { Icon: MessageSquare,label: "WhatsApp Templates",         desc: "Set up and personalise templates"  },
+      { Icon: Mail,         label: "Email Campaigns",            desc: "Configure EmailJS and start sending"},
+    ],
+  },
+  {
+    heading: "Support",
+    items: [
+      { Icon: ChatIcon,     label: "Live Chat",                  desc: "Talk to our team"                  },
+      { Icon: ExternalLink, label: "Documentation",              desc: "Full reference docs"                },
+    ],
+  },
+];
+
+// ─── Utility: close dropdown on outside click ─────────────────────────────────
+function useOutsideClick(ref, onClose) {
+  useEffect(() => {
+    function handler(e) {
+      if (ref.current && !ref.current.contains(e.target)) onClose();
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [ref, onClose]);
+}
 
 // ─── Sidebar nav item ─────────────────────────────────────────────────────────
 function SidebarNavItem({ id, label, Icon, badge, active, onSelect }) {
@@ -71,6 +115,126 @@ function SidebarNavItem({ id, label, Icon, badge, active, onSelect }) {
       )}
       {active && <ChevronRight size={12} className="flex-shrink-0 opacity-40" />}
     </button>
+  );
+}
+
+// ─── Notifications dropdown ──────────────────────────────────────────────────
+function NotificationsDropdown({ onClose }) {
+  const unread = DUMMY_NOTIFICATIONS.filter(n => !n.read).length;
+  return (
+    <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl shadow-black/10 dark:shadow-black/40 overflow-hidden z-50">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-700/60">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-bold text-slate-800 dark:text-white">Notifications</span>
+          {unread > 0 && (
+            <span className="text-[11px] font-bold bg-indigo-500 text-white px-1.5 py-0.5 rounded-full">{unread}</span>
+          )}
+        </div>
+        <button className="text-[11px] font-semibold text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors">
+          Mark all read
+        </button>
+      </div>
+      <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700/40">
+        {DUMMY_NOTIFICATIONS.map(n => (
+          <div key={n.id} className={`flex gap-3 px-4 py-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50 ${!n.read ? "bg-indigo-50/40 dark:bg-indigo-500/[0.04]" : ""}`}>
+            <span className="text-lg flex-shrink-0 mt-0.5">{n.icon}</span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">{n.title}</p>
+                {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 flex-shrink-0" />}
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">{n.body}</p>
+              <p className="text-[10px] text-slate-400 dark:text-slate-600 mt-1">{n.time}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="px-4 py-2.5 border-t border-slate-100 dark:border-slate-700/60 text-center">
+        <button className="text-[11px] font-semibold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+          View all notifications
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Help / Guide dropdown ───────────────────────────────────────────────────
+function GuideDropdown() {
+  return (
+    <div className="absolute right-0 top-full mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl shadow-black/10 dark:shadow-black/40 overflow-hidden z-50">
+      <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700/60">
+        <p className="text-sm font-bold text-slate-800 dark:text-white">Help & Resources</p>
+        <p className="text-[11px] text-slate-400 mt-0.5">Everything you need to get the most out of MapLeads</p>
+      </div>
+      <div className="max-h-80 overflow-y-auto py-2">
+        {GUIDE_SECTIONS.map((section, si) => (
+          <div key={si} className={si > 0 ? "mt-1 pt-1 border-t border-slate-100 dark:border-slate-700/40" : ""}>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-600 px-4 py-1.5">{section.heading}</p>
+            {section.items.map(({ Icon, label, desc }, i) => (
+              <button key={i} className="w-full flex items-start gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-left">
+                <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Icon size={13} className="text-slate-500 dark:text-slate-400" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 leading-tight">{label}</p>
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">{desc}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── User profile dropdown ───────────────────────────────────────────────────
+function ProfileDropdown({ user, isAdmin, onLogout, onClose }) {
+  const avatarLetter = (user?.name || user?.email || "U")[0].toUpperCase();
+  return (
+    <div className="absolute right-0 top-full mt-2 w-60 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl shadow-black/10 dark:shadow-black/40 overflow-hidden z-50">
+      {/* User info header */}
+      <div className="px-4 py-3.5 border-b border-slate-100 dark:border-slate-700/60 flex items-center gap-3">
+        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-white text-sm font-extrabold flex-shrink-0 shadow-sm">
+          {avatarLetter}
+        </div>
+        <div className="min-w-0">
+          <p className="text-xs font-bold text-slate-800 dark:text-white truncate">{user?.name || "User"}</p>
+          <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">{user?.email}</p>
+          {isAdmin && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 px-1.5 py-0.5 rounded-full mt-1">
+              <ShieldCheck size={8} /> Admin
+            </span>
+          )}
+        </div>
+      </div>
+      {/* Menu items */}
+      <div className="py-1.5">
+        <button className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-200 transition-colors">
+          <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+            <User size={12} />
+          </div>
+          View Profile
+        </button>
+        <button className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-200 transition-colors">
+          <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+            <Settings size={12} />
+          </div>
+          Account Settings
+        </button>
+      </div>
+      <div className="border-t border-slate-100 dark:border-slate-700/60 py-1.5">
+        <button
+          onClick={() => { onClose(); onLogout(); }}
+          className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+        >
+          <div className="w-6 h-6 rounded-md bg-red-50 dark:bg-red-950/30 flex items-center justify-center">
+            <LogOut size={12} className="text-red-500" />
+          </div>
+          Sign Out
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -105,8 +269,19 @@ export default function App() {
 // ─── CRM shell ────────────────────────────────────────────────────────────────
 function CRMApp() {
   const { user, logout, isAdmin } = useAuth();
-  const [tab, setTab]               = useState("dashboard");
+  const [tab, setTab]                 = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [notifOpen, setNotifOpen]     = useState(false);
+  const [guideOpen, setGuideOpen]     = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+
+  const notifRef   = useRef(null);
+  const guideRef   = useRef(null);
+  const profileRef = useRef(null);
+
+  useOutsideClick(notifRef,   () => setNotifOpen(false));
+  useOutsideClick(guideRef,   () => setGuideOpen(false));
+  useOutsideClick(profileRef, () => setProfileOpen(false));
 
   const {
     loaded,
@@ -166,10 +341,11 @@ function CRMApp() {
     );
   }
 
-  const bizCount      = businesses.length;
-  const avatarLetter  = (user?.name || user?.email || "U")[0].toUpperCase();
+  const bizCount     = businesses.length;
+  const avatarLetter = (user?.name || user?.email || "U")[0].toUpperCase();
+  const unreadCount  = DUMMY_NOTIFICATIONS.filter(n => !n.read).length;
 
-  // ── Sidebar ─────────────────────────────────────────────────────────────────
+  // ── Sidebar content ─────────────────────────────────────────────────────────
   const sidebarContent = (
     <div className="flex flex-col h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700/60">
 
@@ -230,10 +406,8 @@ function CRMApp() {
         </div>
       </nav>
 
-      {/* Footer */}
-      <div className="flex-shrink-0 border-t border-slate-200 dark:border-slate-700/60 px-4 py-4 space-y-3">
-
-        {/* Plan badge */}
+      {/* Footer — plan badge only */}
+      <div className="flex-shrink-0 border-t border-slate-200 dark:border-slate-700/60 px-4 py-4">
         <div className="flex items-center justify-between bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-500/[0.08] dark:to-violet-500/[0.05] rounded-xl px-3 py-2.5 border border-indigo-100/80 dark:border-indigo-500/20">
           <div className="flex items-center gap-2">
             <Zap size={12} className="text-indigo-500 fill-indigo-500" />
@@ -241,50 +415,6 @@ function CRMApp() {
           </div>
           <button className="text-[11px] text-indigo-500 dark:text-indigo-400 font-semibold hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors">
             Upgrade →
-          </button>
-        </div>
-
-        {/* Country code + dark mode */}
-        <div className="flex items-center gap-2">
-          <Globe size={13} className="text-slate-400 flex-shrink-0" />
-          <select
-            value={countryCode}
-            onChange={(e) => handleCountryCodeChange(e.target.value)}
-            className="flex-1 min-w-0 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg px-2 py-1.5 outline-none cursor-pointer hover:border-slate-300 dark:hover:border-slate-600 focus:ring-2 focus:ring-indigo-500/20 transition-all"
-          >
-            {COUNTRY_CODES.map((c) => <option key={c.code} value={c.code}>{c.label}</option>)}
-          </select>
-          <button
-            onClick={toggleDarkMode}
-            title={dark ? "Switch to Light Mode" : "Switch to Dark Mode"}
-            className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all"
-          >
-            {dark ? <Sun size={14} /> : <Moon size={14} />}
-          </button>
-        </div>
-
-        {/* User row */}
-        <div className="flex items-center gap-2.5 pt-0.5">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center flex-shrink-0 text-white text-xs font-extrabold shadow-sm">
-            {avatarLetter}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate leading-tight">
-              {user?.name || "User"}
-            </div>
-            <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate">{user?.email}</div>
-          </div>
-          {isAdmin && (
-            <span className="flex-shrink-0 flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 px-1.5 py-0.5 rounded-full">
-              <ShieldCheck size={9} />Admin
-            </span>
-          )}
-          <button
-            onClick={logout}
-            title="Sign out"
-            className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-red-500 hover:border-red-200 dark:hover:border-red-800/40 dark:hover:text-red-400 transition-all"
-          >
-            <LogOut size={13} />
           </button>
         </div>
       </div>
@@ -315,7 +445,7 @@ function CRMApp() {
       {/* Main content area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-50 dark:bg-slate-950">
 
-        {/* Top bar */}
+        {/* ── Top bar ─────────────────────────────────────────────────────── */}
         <header className="flex-shrink-0 h-14 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700/60 flex items-center gap-3 px-5">
 
           {/* Hamburger – mobile only */}
@@ -338,21 +468,102 @@ function CRMApp() {
             )}
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-2">
+          {/* ── Right-side controls ── */}
+          <div className="flex items-center gap-1.5">
+
+            {/* Clear All — contextual */}
             {tab === "businesses" && bizCount > 0 && (
               <button
                 onClick={handleClearAll}
-                className="flex items-center gap-1.5 text-xs font-semibold text-red-500 border border-red-200 dark:border-red-800/50 hover:bg-red-50 dark:hover:bg-red-950/20 hover:border-red-300 rounded-lg px-3 py-1.5 transition-all"
+                className="flex items-center gap-1.5 text-xs font-semibold text-red-500 border border-red-200 dark:border-red-800/50 hover:bg-red-50 dark:hover:bg-red-950/20 hover:border-red-300 rounded-lg px-3 py-1.5 mr-2 transition-all"
               >
                 <Trash2 size={12} />
                 <span className="hidden sm:inline">Clear All</span>
               </button>
             )}
+
+            {/* Country code */}
+            <div className="flex items-center gap-1.5 mr-1">
+              <Globe size={13} className="text-slate-400 flex-shrink-0" />
+              <select
+                value={countryCode}
+                onChange={(e) => handleCountryCodeChange(e.target.value)}
+                className="text-xs bg-transparent border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 rounded-lg px-2 py-1.5 outline-none cursor-pointer hover:border-slate-300 dark:hover:border-slate-600 focus:ring-2 focus:ring-indigo-500/20 transition-all max-w-[110px]"
+              >
+                {COUNTRY_CODES.map((c) => <option key={c.code} value={c.code}>{c.label}</option>)}
+              </select>
+            </div>
+
+            {/* Dark mode toggle */}
+            <button
+              onClick={toggleDarkMode}
+              title={dark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+            >
+              {dark ? <Sun size={14} /> : <Moon size={14} />}
+            </button>
+
+            {/* Divider */}
+            <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1" />
+
+            {/* Notifications */}
+            <div ref={notifRef} className="relative">
+              <button
+                onClick={() => { setNotifOpen(v => !v); setGuideOpen(false); setProfileOpen(false); }}
+                className="relative w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                title="Notifications"
+              >
+                <Bell size={16} />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-indigo-500 ring-2 ring-white dark:ring-slate-900" />
+                )}
+              </button>
+              {notifOpen && <NotificationsDropdown onClose={() => setNotifOpen(false)} />}
+            </div>
+
+            {/* Help / Guide */}
+            <div ref={guideRef} className="relative">
+              <button
+                onClick={() => { setGuideOpen(v => !v); setNotifOpen(false); setProfileOpen(false); }}
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                title="Help & Resources"
+              >
+                <HelpCircle size={16} />
+              </button>
+              {guideOpen && <GuideDropdown />}
+            </div>
+
+            {/* Divider */}
+            <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1" />
+
+            {/* User profile avatar */}
+            <div ref={profileRef} className="relative">
+              <button
+                onClick={() => { setProfileOpen(v => !v); setNotifOpen(false); setGuideOpen(false); }}
+                className="flex items-center gap-2 rounded-lg px-1.5 py-1 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                title="My account"
+              >
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-white text-xs font-extrabold flex-shrink-0 shadow-sm">
+                  {avatarLetter}
+                </div>
+                <span className="hidden md:block text-xs font-semibold text-slate-700 dark:text-slate-300 max-w-[100px] truncate">
+                  {user?.name || user?.email}
+                </span>
+                <ChevronDown size={12} className={`hidden md:block text-slate-400 transition-transform duration-150 ${profileOpen ? "rotate-180" : ""}`} />
+              </button>
+              {profileOpen && (
+                <ProfileDropdown
+                  user={user}
+                  isAdmin={isAdmin}
+                  onLogout={logout}
+                  onClose={() => setProfileOpen(false)}
+                />
+              )}
+            </div>
           </div>
         </header>
 
-        {/* Scrollable page content */}
+        {/* ── Scrollable page content ── */}
         <main className="flex-1 overflow-y-auto">
           <div className="max-w-5xl mx-auto p-6">
 
@@ -420,8 +631,6 @@ function CRMApp() {
                 dark={dark}
               />
             )}
-
-            {tab === "data" && <DataView dark={dark} />}
 
           </div>
         </main>
