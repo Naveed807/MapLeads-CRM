@@ -1,0 +1,12 @@
+{
+  "required": "{{field}} is required",
+  "invalid": "{{field}} has an invalid value",
+  "minLength": "{{field}} must be at least {{min}} characters",
+  "maxLength": "{{field}} must not exceed {{max}} characters",
+  "email": "Please enter a valid email address",
+  "url": "Please enter a valid URL",
+  "number": "{{field}} must be a number",
+  "positiveNumber": "{{field}} must be a positive number",
+  "enum": "{{field}} must be one of: {{values}}",
+  "unique": "{{field}} must be unique"
+}

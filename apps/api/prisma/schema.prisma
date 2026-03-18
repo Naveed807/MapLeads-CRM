@@ -1,0 +1,314 @@
+// This is the single source of truth for the MapLeads CRM database schema.
+// Run: npx prisma migrate dev --name init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ────────────────────────────────────────────────────────────────────
+
+enum PlanTier {
+  BASIC
+  FREELANCER
+  AGENCY
+}
+
+enum OrgRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum ContactStatus {
+  NOT_CONTACTED
+  CONTACTED
+  REPLIED
+  CONVERTED
+  NOT_INTERESTED
+  NOT_ON_WHATSAPP
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELLED
+  INCOMPLETE
+}
+
+// ─── USERS ────────────────────────────────────────────────────────────────────
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  passwordHash    String
+  name            String
+  avatarUrl       String?
+  locale          String    @default("en")
+  isAdmin         Boolean   @default(false)
+  isSuspended     Boolean   @default(false)
+  emailVerifiedAt DateTime?
+  lastLoginAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  memberships    OrgMember[]
+  sessions       Session[]
+  passwordResets PasswordReset[]
+
+  @@index([email])
+}
+
+// ─── ORGANIZATIONS ────────────────────────────────────────────────────────────
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  logoUrl   String?
+  timezone  String   @default("UTC")
+  locale    String   @default("en")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members       OrgMember[]
+  subscription  Subscription?
+  businesses    Business[]
+  templates     Template[]
+  importBatches ImportBatch[]
+  emailSetting  EmailSetting?
+  emailLogs     EmailLog[]
+
+  @@index([slug])
+}
+
+model OrgMember {
+  id       String   @id @default(cuid())
+  role     OrgRole  @default(MEMBER)
+  joinedAt DateTime @default(now())
+
+  userId String
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orgId  String
+  org    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, orgId])
+  @@index([orgId])
+}
+
+// ─── BILLING ──────────────────────────────────────────────────────────────────
+
+model Plan {
+  id                   String   @id @default(cuid())
+  tier                 PlanTier @unique
+  name                 String
+  stripePriceId        String?
+  monthlyPriceUsd      Int      @default(0) // cents
+  maxBusinesses        Int      @default(100)
+  maxImportsPerMonth   Int      @default(3)
+  maxTeamMembers       Int      @default(1)
+  maxTemplates         Int      @default(2)
+  canExportCsv         Boolean  @default(false)
+  canUseEmailjs        Boolean  @default(false)
+  canUseReminders      Boolean  @default(false)
+  canUseAdvancedStats  Boolean  @default(false)
+  canUseBulkActions    Boolean  @default(false)
+  canUseApiAccess      Boolean  @default(false)
+  createdAt            DateTime @default(now())
+
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  stripeSubscriptionId String?            @unique
+  stripeCustomerId     String?
+  status               SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  cancelAtPeriodEnd    Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  orgId  String       @unique
+  org    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  planId String
+  plan   Plan         @relation(fields: [planId], references: [id])
+
+  @@index([stripeCustomerId])
+}
+
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
+
+model Session {
+  id           String   @id @default(cuid())
+  refreshToken String   @unique
+  userAgent    String?
+  ipAddress    String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model PasswordReset {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ─── CORE CRM ─────────────────────────────────────────────────────────────────
+
+model Business {
+  id            String   @id @default(cuid())
+  name          String
+  category      String?
+  phone         String?
+  email         String?
+  address       String?
+  website       String?
+  mapsUrl       String?
+  rating        String?
+  reviews       String?
+  hours         String?
+  importedAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  orgId         String
+  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  importBatchId String?
+  importBatch   ImportBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+
+  contact   Contact?
+  tags      BusinessTag[]
+  reminders Reminder[]
+  emailLogs EmailLog[]
+
+  @@unique([orgId, name, phone])
+  @@index([orgId])
+  @@index([orgId, importedAt])
+  @@index([orgId, email])
+}
+
+model Contact {
+  id          String        @id @default(cuid())
+  status      ContactStatus @default(NOT_CONTACTED)
+  note        String?
+  contactedAt DateTime?
+  repliedAt   DateTime?
+  convertedAt DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  bizId    String   @unique
+  business Business @relation(fields: [bizId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+
+model BusinessTag {
+  id        String   @id @default(cuid())
+  tag       String
+  createdAt DateTime @default(now())
+
+  bizId    String
+  business Business @relation(fields: [bizId], references: [id], onDelete: Cascade)
+
+  @@unique([bizId, tag])
+  @@index([bizId])
+}
+
+model Reminder {
+  id        String   @id @default(cuid())
+  dueDate   DateTime
+  note      String?
+  isDone    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  bizId    String
+  business Business @relation(fields: [bizId], references: [id], onDelete: Cascade)
+
+  @@index([bizId])
+  @@index([dueDate])
+}
+
+// ─── IMPORTS ──────────────────────────────────────────────────────────────────
+
+model ImportBatch {
+  id           String   @id @default(cuid())
+  source       String   // "google_maps" | "excel" | "csv"
+  totalCount   Int
+  addedCount   Int
+  skippedCount Int
+  importedAt   DateTime @default(now())
+
+  orgId      String
+  org        Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  businesses Business[]
+
+  @@index([orgId, importedAt])
+}
+
+// ─── TEMPLATES ────────────────────────────────────────────────────────────────
+
+model Template {
+  id        String   @id @default(cuid())
+  name      String
+  body      String
+  type      String   @default("whatsapp") // "whatsapp" | "email_subject" | "email_body"
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, type])
+}
+
+// ─── EMAIL ────────────────────────────────────────────────────────────────────
+
+model EmailSetting {
+  id             String   @id @default(cuid())
+  serviceId      String?
+  templateId     String?
+  publicKey      String?
+  fromName       String?
+  defaultSubject String?
+  defaultBody    String?
+  updatedAt      DateTime @updatedAt
+
+  orgId String       @unique
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+}
+
+model EmailLog {
+  id       String   @id @default(cuid())
+  toEmail  String
+  subject  String
+  status   String   // "sent" | "failed" | "mailto_fallback"
+  errorMsg String?
+  sentAt   DateTime @default(now())
+
+  bizId    String
+  business Business     @relation(fields: [bizId], references: [id], onDelete: Cascade)
+  orgId    String
+  org      Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([bizId])
+  @@index([orgId, sentAt])
+}

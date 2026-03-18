@@ -1,0 +1,10 @@
+{
+  "notFound": "The requested resource was not found",
+  "forbidden": "You do not have permission to perform this action",
+  "unauthorized": "Authentication required",
+  "planLimit": "Your plan does not support this feature. Please upgrade to continue.",
+  "serverError": "An unexpected error occurred. Please try again.",
+  "conflict": "A conflict occurred. The resource may already exist.",
+  "rateLimited": "Too many requests. Please slow down and try again.",
+  "invalidInput": "The provided input is invalid"
+}

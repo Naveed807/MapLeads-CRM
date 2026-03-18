@@ -1,26 +1,52 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
+# dependencies — root + all workspaces
 /node_modules
+apps/*/node_modules
+packages/*/node_modules
 /.pnp
 .pnp.js
 
-# Features
-features.md
+# markdown / documentation files
+*.md
+
+# git helper files
+.gitkeep
+.gitattributes
 
 # testing
 /coverage
+apps/*/coverage
 
-# production
+# production builds
 /build
+apps/*/dist
+apps/*/build
 
-# misc
-.DS_Store
+# environment files (keep .env.example templates)
+.env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+apps/api/.env
 
+# misc
+.DS_Store
+Thumbs.db
+
+# logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+*.log
+
+# TypeScript build info
+*.tsbuildinfo
+apps/*/tsconfig.tsbuildinfo
+
+# uploads / exports (runtime storage)
+apps/api/storage/
+
+# Prisma generated client (regenerated on install)
+apps/api/node_modules/.prisma
