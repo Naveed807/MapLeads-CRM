@@ -73,8 +73,19 @@ export class ImportService {
         continue;
       }
       existingSet.add(key);
+      // Only pass fields that exist on the Business model — strip any
+      // extra keys the frontend may include (e.g. id, notes, status).
       toAdd.push({
-        ...biz,
+        name:          biz.name,
+        category:      biz.category  || null,
+        phone:         biz.phone     || null,
+        email:         biz.email     || null,
+        address:       biz.address   || null,
+        website:       biz.website   || null,
+        mapsUrl:       biz.mapsUrl   || null,
+        rating:        biz.rating    || null,
+        reviews:       biz.reviews   || null,
+        hours:         biz.hours     || null,
         orgId,
         importBatchId: batch.id,
         importedAt:    new Date(),
