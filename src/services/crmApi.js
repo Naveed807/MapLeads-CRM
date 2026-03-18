@@ -7,6 +7,25 @@
 
 const BASE = process.env.REACT_APP_API_URL || 'http://localhost:4000/api/v1';
 
+// Refresh the access token using the HttpOnly refresh_token cookie.
+// Returns the new access token, or throws if the session has fully expired.
+let _refreshPromise = null;
+async function refreshAccessToken() {
+  if (_refreshPromise) return _refreshPromise;          // coalesce concurrent calls
+  _refreshPromise = (async () => {
+    try {
+      const res  = await fetch(`${BASE}/auth/refresh`, { method: 'POST', credentials: 'include' });
+      const json = await res.json();
+      if (!json.success) throw new Error('Session expired');
+      localStorage.setItem('mapleads_token', json.data.accessToken);
+      return json.data.accessToken;
+    } finally {
+      _refreshPromise = null;
+    }
+  })();
+  return _refreshPromise;
+}
+
 async function request(path, options = {}) {
   const token = localStorage.getItem('mapleads_token');
   const isFormData = options.body instanceof FormData;
@@ -16,8 +35,32 @@ async function request(path, options = {}) {
   };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(`${BASE}${path}`, { ...options, headers, credentials: 'include' });
+  const res  = await fetch(`${BASE}${path}`, { ...options, headers, credentials: 'include' });
   const json = await res.json();
+
+  // Token expired — silently refresh and retry once
+  if (res.status === 401) {
+    try {
+      const newToken     = await refreshAccessToken();
+      const retryHeaders = { ...headers, Authorization: `Bearer ${newToken}` };
+      const retryRes     = await fetch(`${BASE}${path}`, { ...options, headers: retryHeaders, credentials: 'include' });
+      const retryJson    = await retryRes.json();
+      if (!retryJson.success) {
+        const err    = new Error(retryJson.error?.message || 'Request failed');
+        err.code     = retryJson.error?.code;
+        err.status   = retryRes.status;
+        err.details  = retryJson.error?.details;
+        throw err;
+      }
+      return retryJson.data;
+    } catch (refreshErr) {
+      // Refresh token also expired — clear session and redirect to login
+      localStorage.removeItem('mapleads_token');
+      localStorage.removeItem('mapleads_user');
+      window.location.href = '/';
+      throw new Error('Session expired. Please log in again.');
+    }
+  }
 
   if (!json.success) {
     const err = new Error(json.error?.message || 'Request failed');
