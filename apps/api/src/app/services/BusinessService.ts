@@ -9,8 +9,8 @@ type ContactStatus = 'NOT_CONTACTED' | 'CONTACTED' | 'REPLIED' | 'CONVERTED' | '
 export class BusinessService {
   async list(orgId: string, query: BusinessQuery) {
     return businessRepository.findByOrg(orgId, {
-      page:    query.page    ?? 1,
-      perPage: query.perPage ?? 20,
+      page:    Math.max(1, parseInt(String(query.page    ?? 1),  10) || 1),
+      perPage: Math.min(500, Math.max(1, parseInt(String(query.perPage ?? 20), 10) || 20)),
       search:  query.search,
       status:  query.status as ContactStatus | undefined,
       tag:     query.tag,
