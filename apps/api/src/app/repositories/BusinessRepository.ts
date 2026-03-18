@@ -68,20 +68,29 @@ export class BusinessRepository extends BaseRepository<Business> {
   }
 
   async countByOrg(orgId: string): Promise<number> {
-    const redis = getRedis();
-    const key   = `org:${orgId}:biz:count`;
-    const cached = await redis.get(key);
-    if (cached !== null) return Number(cached);
+    try {
+      const redis  = getRedis();
+      const key    = `org:${orgId}:biz:count`;
+      const cached = await redis.get(key);
+      if (cached !== null) return Number(cached);
 
-    const count = await prisma.business.count({ where: { orgId } });
-    await redis.setex(key, CACHE_TTL, count);
-    return count;
+      const count = await prisma.business.count({ where: { orgId } });
+      await redis.setex(key, CACHE_TTL, count).catch(() => {});
+      return count;
+    } catch {
+      // Redis unavailable — query DB directly
+      return prisma.business.count({ where: { orgId } });
+    }
   }
 
   async invalidateOrgCache(orgId: string): Promise<void> {
-    const redis = getRedis();
-    const keys  = await redis.keys(`org:${orgId}:*`);
-    if (keys.length) await redis.del(...keys);
+    try {
+      const redis = getRedis();
+      const keys  = await redis.keys(`org:${orgId}:*`);
+      if (keys.length) await redis.del(...keys);
+    } catch {
+      // Redis unavailable — skip cache invalidation
+    }
   }
 
   async getStats(orgId: string) {
