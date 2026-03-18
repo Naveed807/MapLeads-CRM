@@ -1,4 +1,12 @@
 import { useState } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
+import { ProtectedRoute, GuestRoute } from "./components/ProtectedRoute";
+import LoginPage          from "./pages/LoginPage";
+import RegisterPage       from "./pages/RegisterPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage  from "./pages/ResetPasswordPage";
+import AdminLoginPage     from "./pages/AdminLoginPage";
 import { useAppData } from "./hooks/useAppData";
 import { COUNTRY_CODES, DARK, LIGHT } from "./constants";
 import Dashboard      from "./components/Dashboard";
@@ -6,8 +14,10 @@ import BusinessesView from "./components/BusinessesView";
 import ImportView     from "./components/ImportView";
 import TemplateView   from "./components/TemplateView";
 import DataView       from "./components/DataView";
-import { LayoutDashboard, Building2, Upload, MessageSquare, Database, Trash2, Moon, Sun, Globe, Mail } from "lucide-react";
+import { LayoutDashboard, Building2, Upload, MessageSquare, Database, Trash2, Moon, Sun, Globe, Mail, LogOut, ShieldCheck } from "lucide-react";
+import { useAuth } from "./context/AuthContext";
 import EmailSettingsView from "./components/EmailSettingsView";
+import "./styles/auth.css";
 
 const TABS = [
   { id: "dashboard",  label: "Dashboard",  Icon: LayoutDashboard },
@@ -19,6 +29,35 @@ const TABS = [
 ];
 
 export default function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Guest-only routes (redirect to dashboard if logged in) */}
+          <Route path="/login"           element={<GuestRoute><LoginPage /></GuestRoute>} />
+          <Route path="/register"        element={<GuestRoute><RegisterPage /></GuestRoute>} />
+          <Route path="/forgot-password" element={<GuestRoute><ForgotPasswordPage /></GuestRoute>} />
+          <Route path="/reset-password"  element={<GuestRoute><ResetPasswordPage /></GuestRoute>} />
+          <Route path="/admin/login"     element={<GuestRoute><AdminLoginPage /></GuestRoute>} />
+
+          {/* Protected user routes */}
+          <Route path="/dashboard" element={<ProtectedRoute><CRMApp /></ProtectedRoute>} />
+          <Route path="/dashboard/:tab" element={<ProtectedRoute><CRMApp /></ProtectedRoute>} />
+
+          {/* Admin routes */}
+          <Route path="/admin/dashboard" element={<ProtectedRoute requireAdmin><CRMApp isAdmin /></ProtectedRoute>} />
+
+          {/* Default redirect */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
+  );
+}
+
+function CRMApp() {
+  const { user, logout, isAdmin } = useAuth();
   const [tab, setTab] = useState("dashboard");
 
   const {
@@ -132,6 +171,22 @@ export default function App() {
               <Trash2 size={13} />Clear All
             </button>
           )}
+
+          {/* User info + logout */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, borderLeft: `1px solid ${C.border}`, paddingLeft: 12, marginLeft: 4 }}>
+            {isAdmin && (
+              <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 600, color: "#f59e0b", background: "#fef3c7", padding: "3px 8px", borderRadius: 20 }}>
+                <ShieldCheck size={11} />Admin
+              </span>
+            )}
+            <span style={{ fontSize: 12, color: C.muted, maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {user?.name || user?.email}
+            </span>
+            <button onClick={logout} title="Sign out"
+              style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: 7, padding: "5px 7px", cursor: "pointer", display: "flex", alignItems: "center", color: C.muted }}>
+              <LogOut size={13} />
+            </button>
+          </div>
         </div>
       </header>
 

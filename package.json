@@ -7,13 +7,10 @@
     "packages/shared"
   ],
   "scripts": {
-    "dev": "turbo run dev",
-    "build": "turbo run build",
-    "dev:api": "npm run dev --workspace=apps/api",
-    "dev:web": "react-scripts start",
-    "db:migrate": "npm run migrate --workspace=apps/api",
-    "db:seed": "npm run seed --workspace=apps/api",
-    "db:studio": "npm run studio --workspace=apps/api"
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
   },
   "devDependencies": {
     "turbo": "^2.3.3"
@@ -28,17 +25,12 @@
     "lucide-react": "^0.577.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "react-router-dom": "^7.13.1",
     "react-scripts": "5.0.1",
     "recharts": "^3.7.0",
     "sweetalert2": "^11.26.22",
     "web-vitals": "^2.1.4",
     "xlsx": "^0.18.5"
-  },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
   },
   "eslintConfig": {
     "extends": [

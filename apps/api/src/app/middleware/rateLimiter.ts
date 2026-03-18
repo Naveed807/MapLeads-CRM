@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { RateLimiterRedis } from 'rate-limiter-flexible';
+import { RateLimiterRedis, RateLimiterMemory } from 'rate-limiter-flexible';
 import { getRedis } from '../../config/redis';
 import { config } from '../../config/app';
 import { AppError } from '../errors/AppError';
@@ -9,11 +9,17 @@ let limiter: RateLimiterRedis | null = null;
 function getLimiter(): RateLimiterRedis {
   if (!limiter) {
     limiter = new RateLimiterRedis({
-      storeClient: getRedis(),
-      keyPrefix:   'rl',
-      points:      config.rateLimit.max,
-      duration:    Math.floor(config.rateLimit.windowMs / 1000),
+      storeClient:   getRedis(),
+      keyPrefix:     'rl',
+      points:        config.rateLimit.max,
+      duration:      Math.floor(config.rateLimit.windowMs / 1000),
       blockDuration: 60,
+      // Fallback to in-memory limiting when Redis is unavailable
+      insuranceLimiter: new RateLimiterMemory({
+        keyPrefix: 'rl_mem',
+        points:    config.rateLimit.max,
+        duration:  Math.floor(config.rateLimit.windowMs / 1000),
+      }),
     });
   }
   return limiter;
@@ -25,9 +31,11 @@ export function rateLimiter(req: Request, _res: Response, next: NextFunction): v
     .consume(key)
     .then(() => next())
     .catch((err) => {
-      // If Redis is down, fail open (allow request) rather than blocking all traffic
-      if (err && err.remainingPoints === undefined) return next();
-      next(new AppError(429, 'RATE_LIMIT_EXCEEDED', 'Too many requests. Please slow down.'));
+      if (err && typeof (err as any).remainingPoints === 'number') {
+        next(new AppError(429, 'RATE_LIMIT_EXCEEDED', 'Too many requests. Please slow down.'));
+      } else {
+        next();
+      }
     });
 }
 
@@ -42,6 +50,12 @@ function getAuthLimiter(): RateLimiterRedis {
       points:        10,
       duration:      900,   // 15 minutes
       blockDuration: 900,
+      // Fallback to in-memory limiting when Redis is unavailable
+      insuranceLimiter: new RateLimiterMemory({
+        keyPrefix: 'rl_auth_mem',
+        points:    10,
+        duration:  900,
+      }),
     });
   }
   return authLimiter;
@@ -53,8 +67,10 @@ export function authRateLimiter(req: Request, _res: Response, next: NextFunction
     .consume(key)
     .then(() => next())
     .catch((err) => {
-      // If Redis is down, fail open
-      if (err && err.remainingPoints === undefined) return next();
-      next(new AppError(429, 'AUTH_RATE_LIMIT', 'Too many login attempts. Try again in 15 minutes.'));
+      if (err && typeof (err as any).remainingPoints === 'number') {
+        next(new AppError(429, 'AUTH_RATE_LIMIT', 'Too many login attempts. Try again in 15 minutes.'));
+      } else {
+        next();
+      }
     });
 }

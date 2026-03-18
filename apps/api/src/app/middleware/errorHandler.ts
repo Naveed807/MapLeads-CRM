@@ -23,10 +23,15 @@ export function errorHandler(
     return;
   }
 
+  // Body-parser / JSON.parse SyntaxError (malformed request body)
+  if (err instanceof SyntaxError && (err as any).status === 400 && 'body' in err) {
+    res.status(400).json(fail('INVALID_JSON', 'Request body contains invalid JSON'));
+    return;
+  }
+
   // Unknown errors — log and return generic 500
   logger.error('Unhandled error:', err);
-  const isDev = process.env.NODE_ENV !== 'production';
-  res.status(500).json(fail('SERVER_ERROR', isDev ? String(err) : 'An unexpected error occurred'));
+  res.status(500).json(fail('SERVER_ERROR', 'An unexpected error occurred'));
 }
 
 // 404 handler
