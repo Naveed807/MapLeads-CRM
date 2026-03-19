@@ -31,14 +31,16 @@ import "./styles/auth.css";
 const MAIN_NAV = [
   { id: "dashboard",  label: "Dashboard",  Icon: LayoutDashboard },
   { id: "businesses", label: "Businesses", Icon: Building2 },
-  { id: "import",     label: "Import",     Icon: Upload },
-  { id: "users",      label: "Add Users",  Icon: Users, requiresPaid: true },
+  { id: "import",     label: "Import",     Icon: Upload,    hiddenForRoles: ["SALES_REP", "MEMBER"] },
+  { id: "users",      label: "Add Users",  Icon: Users, requiresPaid: true, hiddenForRoles: ["TEAM_LEAD", "SALES_REP", "MEMBER"] },
 ];
 
 const SETTINGS_NAV = [
-  { id: "template", label: "Templates",      Icon: MessageSquare },
-  { id: "email",    label: "Email Settings", Icon: Mail },
+  { id: "template", label: "Templates",      Icon: MessageSquare, hiddenForRoles: ["TEAM_LEAD", "SALES_REP", "MEMBER"] },
+  { id: "email",    label: "Email Settings", Icon: Mail,          hiddenForRoles: ["TEAM_LEAD", "SALES_REP", "MEMBER"] },
 ];
+
+const PLAN_LABELS = { BASIC: "Basic Plan", FREELANCER: "Freelancer Plan", AGENCY: "Agency Plan" };
 
 const PAGE_TITLES = {
   dashboard:  "Dashboard",
@@ -361,6 +363,16 @@ function CRMApp() {
       .catch(() => {});
   }, []);
 
+  // Guard: redirect if current URL tab is restricted for this role
+  useEffect(() => {
+    if (!orgRole) return;
+    const allNav = [...MAIN_NAV, ...SETTINGS_NAV];
+    const item = allNav.find(n => n.id === tab);
+    if (item?.hiddenForRoles?.includes(orgRole)) {
+      routerNavigate("/dashboard/businesses", { replace: true });
+    }
+  }, [tab, orgRole]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const notifRef   = useRef(null);
   const guideRef   = useRef(null);
   const profileRef = useRef(null);
@@ -372,6 +384,14 @@ function CRMApp() {
   const dark = darkMode;
 
   function navigate(nextTab) {
+    // Guard: redirect restricted roles away from tabs they can't see
+    const allNav = [...MAIN_NAV, ...SETTINGS_NAV];
+    const item = allNav.find(n => n.id === nextTab);
+    if (item?.hiddenForRoles?.includes(orgRole)) {
+      routerNavigate("/dashboard/businesses");
+      setSidebarOpen(false);
+      return;
+    }
     routerNavigate(nextTab === "dashboard" ? "/dashboard" : `/dashboard/${nextTab}`);
     setSidebarOpen(false);
   }
@@ -421,7 +441,7 @@ function CRMApp() {
           Main
         </p>
         <div className="space-y-0.5">
-          {MAIN_NAV.map(({ id, label, Icon, requiresPaid }) => (
+          {MAIN_NAV.filter(item => !item.hiddenForRoles?.includes(orgRole)).map(({ id, label, Icon, requiresPaid }) => (
             <SidebarNavItem
               key={id}
               id={id}
@@ -435,23 +455,25 @@ function CRMApp() {
           ))}
         </div>
 
-        <div className="mt-6">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-600 px-3 pb-2 select-none">
-            Settings
-          </p>
-          <div className="space-y-0.5">
-            {SETTINGS_NAV.map(({ id, label, Icon }) => (
-              <SidebarNavItem
-                key={id}
-                id={id}
-                label={label}
-                Icon={Icon}
-                active={tab === id}
-                onSelect={navigate}
-              />
-            ))}
+        {SETTINGS_NAV.filter(item => !item.hiddenForRoles?.includes(orgRole)).length > 0 && (
+          <div className="mt-6">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-600 px-3 pb-2 select-none">
+              Settings
+            </p>
+            <div className="space-y-0.5">
+              {SETTINGS_NAV.filter(item => !item.hiddenForRoles?.includes(orgRole)).map(({ id, label, Icon }) => (
+                <SidebarNavItem
+                  key={id}
+                  id={id}
+                  label={label}
+                  Icon={Icon}
+                  active={tab === id}
+                  onSelect={navigate}
+                />
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </nav>
 
       {/* Footer — plan badge only */}
@@ -459,7 +481,7 @@ function CRMApp() {
         <div className="flex items-center justify-between bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-500/[0.08] dark:to-violet-500/[0.05] rounded-xl px-3 py-2.5 border border-indigo-100/80 dark:border-indigo-500/20">
           <div className="flex items-center gap-2">
             <Zap size={12} className="text-indigo-500 fill-indigo-500" />
-            <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">Basic Plan</span>
+            <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">{PLAN_LABELS[planTier] || planTier || "Basic Plan"}</span>
           </div>
           <button className="text-[11px] text-indigo-500 dark:text-indigo-400 font-semibold hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors">
             Upgrade →

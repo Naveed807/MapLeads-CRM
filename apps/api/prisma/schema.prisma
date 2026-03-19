@@ -73,6 +73,7 @@ model User {
   sessions       Session[]
   passwordResets PasswordReset[]
   contactLogs    ContactLog[]
+  notifications  Notification[]
 
   @@index([email])
 }
@@ -379,9 +380,12 @@ model Notification {
   meta      Json?
   createdAt DateTime         @default(now())
 
-  orgId String
-  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  orgId  String
+  org    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  userId String?
+  user   User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([orgId, createdAt])
   @@index([orgId, read])
+  @@index([orgId, userId, createdAt])
 }

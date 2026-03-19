@@ -11,6 +11,7 @@ export class ImportController {
    */
   async importBusinesses(req: Request, res: Response, next: NextFunction): Promise<void> {
     const orgId    = req.org!.id;
+    const userId   = req.user!.id;
     const planTier = (req.org!.subscription?.plan as any)?.tier ?? 'BASIC';
     const { businesses, source = 'google_maps' } = req.body;
 
@@ -31,16 +32,17 @@ export class ImportController {
         `${result.added} business${result.added !== 1 ? 'es' : ''} imported from ${sourceLabel}` +
           (result.skipped ? ` (${result.skipped} duplicate${result.skipped !== 1 ? 's' : ''} skipped)` : '') + '.',
         { batchId: result.batchId, added: result.added, skipped: result.skipped, source },
+        userId,
       ).catch(() => { /* swallow — notification is non-critical */ });
 
       res.status(201).json(ok(result, `Imported ${result.added} businesses`));
     } catch (e: any) {
       if (e.code === 'IMPORT_LIMIT_EXCEEDED') {
-        notificationService.create(orgId, 'IMPORT_LIMIT_REACHED', 'Monthly import limit reached', e.message).catch(() => {});
+        notificationService.create(orgId, 'IMPORT_LIMIT_REACHED', 'Monthly import limit reached', e.message, undefined, userId).catch(() => {});
       } else if (e.code === 'BUSINESS_LIMIT_EXCEEDED') {
-        notificationService.create(orgId, 'BUSINESS_LIMIT_REACHED', 'Business storage limit reached', e.message).catch(() => {});
+        notificationService.create(orgId, 'BUSINESS_LIMIT_REACHED', 'Business storage limit reached', e.message, undefined, userId).catch(() => {});
       } else {
-        notificationService.create(orgId, 'IMPORT_FAILED', 'Import failed', 'An unexpected error occurred. Please try again.').catch(() => {});
+        notificationService.create(orgId, 'IMPORT_FAILED', 'Import failed', 'An unexpected error occurred. Please try again.', undefined, userId).catch(() => {});
       }
       next(e);
     }

@@ -12,7 +12,7 @@
  * Valid tiers: BASIC | FREELANCER | AGENCY
  */
 
-import '../config/env';
+import 'dotenv/config';
 import { prisma } from '../config/database';
 
 async function main() {
@@ -26,14 +26,31 @@ async function main() {
 
   const upperTier = tier.toUpperCase();
 
+  // Check if user exists first
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) {
+    console.error(`\nUser not found: ${email}`);
+    const allUsers = await prisma.user.findMany({ select: { email: true, name: true }, orderBy: { createdAt: 'asc' } });
+    if (allUsers.length === 0) {
+      console.error('No users in the database. Run: npm run seed');
+    } else {
+      console.error('\nRegistered users:');
+      allUsers.forEach(u => console.error(`  ${u.email}  (${u.name})`));
+    }
+    await prisma.$disconnect();
+    process.exit(1);
+  }
+
   // Users are linked to orgs via OrgMember — find the first membership
   const membership = await prisma.orgMember.findFirst({
-    where: { user: { email } },
-    include: { user: true, org: true },
+    where: { userId: user.id },
+    include: { org: true },
   });
 
   if (!membership) {
-    console.error(`No org membership found for: ${email}`);
+    console.error(`\nUser ${email} exists but has no org membership yet.`);
+    console.error('They need to complete registration (create an org) first.');
+    await prisma.$disconnect();
     process.exit(1);
   }
 
@@ -65,7 +82,7 @@ async function main() {
     },
   });
 
-  console.log(`\nOrg: ${membership.org.name} (${membership.user.email})`);
+  console.log(`\nOrg: ${membership.org.name} (${user.email})`);
   console.log(`Plan: ${plan.tier} — ${plan.name}`);
   console.log(`Subscription ID: ${sub.id}`);
   console.log(`Period end: ${sub.currentPeriodEnd.toISOString()}\n`);

@@ -10,12 +10,12 @@ export type NotifType =
 
 export class NotificationService {
   /** Create and persist a notification for an org. Returns the created record. */
-  async create(orgId: string, type: NotifType, title: string, body: string, meta?: Record<string, any>) {
-    return notificationRepository.createNotification({ orgId, type, title, body, meta });
+  async create(orgId: string, type: NotifType, title: string, body: string, meta?: Record<string, any>, userId?: string) {
+    return notificationRepository.createNotification({ orgId, type, title, body, meta, userId });
   }
 
-  async listForOrg(orgId: string) {
-    return notificationRepository.findByOrg(orgId);
+  async listForOrg(orgId: string, userId: string) {
+    return notificationRepository.findByOrg(orgId, userId);
   }
 
   async markRead(id: string, orgId: string) {

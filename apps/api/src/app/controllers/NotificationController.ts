@@ -5,7 +5,7 @@ import { ok } from '@mapleads/shared';
 export class NotificationController {
   async list(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const notifications = await notificationService.listForOrg(req.org!.id);
+      const notifications = await notificationService.listForOrg(req.org!.id, req.user!.id);
       res.json(ok(notifications));
     } catch (e) { next(e); }
   }
