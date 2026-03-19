@@ -7,15 +7,35 @@ import type { BusinessQuery, BulkStatusInput, BulkDeleteInput } from '@mapleads/
 type ContactStatus = 'NOT_CONTACTED' | 'CONTACTED' | 'REPLIED' | 'CONVERTED' | 'NOT_INTERESTED' | 'NOT_ON_WHATSAPP';
 
 export class BusinessService {
-  async list(orgId: string, query: BusinessQuery) {
+  async list(orgId: string, query: BusinessQuery, userId?: string, role?: string) {
+    const page    = Math.max(1, parseInt(String(query.page    ?? 1),  10) || 1);
+    const perPage = Math.min(500, Math.max(1, parseInt(String(query.perPage ?? 20), 10) || 20));
+
+    // SALES_REP: only see businesses that are explicitly assigned to them
+    let assignedIds: string[] | undefined;
+    if (role === 'SALES_REP' && userId) {
+      const member = await prisma.orgMember.findUnique({
+        where: { userId_orgId: { userId, orgId } },
+        select: { id: true },
+      });
+      if (!member) return { businesses: [], total: 0 };
+      const assignments = await prisma.businessAssignment.findMany({
+        where:  { memberId: member.id },
+        select: { bizId: true },
+      });
+      assignedIds = assignments.map(a => a.bizId);
+      if (assignedIds.length === 0) return { businesses: [], total: 0 };
+    }
+
     return businessRepository.findByOrg(orgId, {
-      page:    Math.max(1, parseInt(String(query.page    ?? 1),  10) || 1),
-      perPage: Math.min(500, Math.max(1, parseInt(String(query.perPage ?? 20), 10) || 20)),
+      page,
+      perPage,
       search:  query.search,
       status:  query.status as ContactStatus | undefined,
       tag:     query.tag,
       sortBy:  query.sortBy   ?? 'importedAt',
       sortDir: query.sortDir  ?? 'desc',
+      ids:     assignedIds,
     });
   }
 

@@ -30,7 +30,7 @@ export const PLAN_LIMITS: Record<PlanTier, PlanConfig> = {
   FREELANCER: {
     maxBusinesses:       2_000,
     maxImportsPerMonth:  30,
-    maxTeamMembers:      1,
+    maxTeamMembers:      3,
     maxTemplates:        20,
     canExportCsv:        true,
     canUseEmailjs:       true,

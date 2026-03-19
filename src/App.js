@@ -14,12 +14,14 @@ import BusinessesView    from "./components/BusinessesView";
 import ImportView        from "./components/ImportView";
 import TemplateView      from "./components/TemplateView";
 import EmailSettingsView from "./components/EmailSettingsView";
+import UsersView         from "./components/UsersView";
 import {
   LayoutDashboard, Building2, Upload, MessageSquare,
   Trash2, Moon, Sun, Mail, LogOut, ShieldCheck,
   Menu, X, Zap, ChevronRight, Bell, HelpCircle,
   User, Settings, BookOpen, Video, MessageCircle as ChatIcon,
   ExternalLink, ChevronDown, Download, TrendingUp, AlertTriangle,
+  Users,
 } from "lucide-react";
 import { useAuth } from "./context/AuthContext";
 import { notificationApi } from "./services/crmApi";
@@ -30,6 +32,7 @@ const MAIN_NAV = [
   { id: "dashboard",  label: "Dashboard",  Icon: LayoutDashboard },
   { id: "businesses", label: "Businesses", Icon: Building2 },
   { id: "import",     label: "Import",     Icon: Upload },
+  { id: "users",      label: "Add Users",  Icon: Users, requiresPaid: true },
 ];
 
 const SETTINGS_NAV = [
@@ -43,6 +46,7 @@ const PAGE_TITLES = {
   import:     "Import",
   template:   "Templates",
   email:      "Email Settings",
+  users:      "Team & Organization",
 };
 
 // Map notification type → icon + colour
@@ -106,7 +110,7 @@ function useOutsideClick(ref, onClose) {
 }
 
 // ─── Sidebar nav item ─────────────────────────────────────────────────────────
-function SidebarNavItem({ id, label, Icon, badge, active, onSelect }) {
+function SidebarNavItem({ id, label, Icon, badge, active, onSelect, locked }) {
   return (
     <button
       onClick={() => onSelect(id)}
@@ -127,6 +131,11 @@ function SidebarNavItem({ id, label, Icon, badge, active, onSelect }) {
             : "bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400",
         ].join(" ")}>
           {badge}
+        </span>
+      )}
+      {locked && (
+        <span className="text-[10px] font-bold text-amber-500 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 px-1.5 py-0.5 rounded-full">
+          Pro
         </span>
       )}
       {active && <ChevronRight size={12} className="flex-shrink-0 opacity-40" />}
@@ -321,7 +330,7 @@ export default function App() {
 
 // ─── CRM shell ────────────────────────────────────────────────────────────────
 function CRMApp() {
-  const { user, logout, isAdmin }         = useAuth();
+  const { user, logout, isAdmin, planTier, orgRole, org } = useAuth();
   const { tab: rawTab }                   = useParams();
   const routerNavigate                    = useNavigate();
   const tab                               = rawTab || "dashboard";
@@ -437,7 +446,7 @@ function CRMApp() {
           Main
         </p>
         <div className="space-y-0.5">
-          {MAIN_NAV.map(({ id, label, Icon }) => (
+          {MAIN_NAV.map(({ id, label, Icon, requiresPaid }) => (
             <SidebarNavItem
               key={id}
               id={id}
@@ -446,6 +455,7 @@ function CRMApp() {
               badge={id === "businesses" && bizCount ? bizCount : null}
               active={tab === id}
               onSelect={navigate}
+              locked={requiresPaid && planTier === "BASIC"}
             />
           ))}
         </div>
@@ -535,7 +545,7 @@ function CRMApp() {
           <div className="flex items-center gap-1.5">
 
             {/* Clear All — contextual */}
-            {tab === "businesses" && bizCount > 0 && (
+            {/* {tab === "businesses" && bizCount > 0 && (
               <button
                 onClick={handleClearAll}
                 className="flex items-center gap-1.5 text-xs font-semibold text-red-500 border border-red-200 dark:border-red-800/50 hover:bg-red-50 dark:hover:bg-red-950/20 hover:border-red-300 rounded-lg px-3 py-1.5 mr-2 transition-all"
@@ -543,7 +553,7 @@ function CRMApp() {
                 <Trash2 size={12} />
                 <span className="hidden sm:inline">Clear All</span>
               </button>
-            )}
+            )} */}
 
             {/* Dark mode toggle */}
             <button
@@ -680,6 +690,15 @@ function CRMApp() {
                 emailSettings={{ ...emailSettings, subject: emailSubject, body: emailBody }}
                 onSaveEmailSettings={handleSaveEmailSettings}
                 dark={dark}
+              />
+            )}
+
+            {tab === "users" && (
+              <UsersView
+                dark={dark}
+                user={{ ...user, role: orgRole, planTier }}
+                org={org}
+                planTier={planTier}
               />
             )}
 

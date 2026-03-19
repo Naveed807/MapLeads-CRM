@@ -8,6 +8,7 @@ import dashboardRoutes    from './v1/dashboard.routes';
 import billingRoutes      from './v1/billing.routes';
 import accountRoutes      from './v1/account.routes';
 import notificationRoutes from './v1/notification.routes';
+import teamRoutes         from './v1/team.routes';
 import adminRoutes        from './admin.routes';
 
 const router = Router();
@@ -22,6 +23,7 @@ router.use('/v1/dashboard',     dashboardRoutes);
 router.use('/v1/billing',       billingRoutes);
 router.use('/v1/account',       accountRoutes);
 router.use('/v1/notifications', notificationRoutes);
+router.use('/v1/team',          teamRoutes);
 
 // Admin panel API
 router.use('/admin', adminRoutes);

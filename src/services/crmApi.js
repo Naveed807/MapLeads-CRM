@@ -127,9 +127,38 @@ export const notificationApi = {
   dismiss:     (id) => request(`/notifications/${id}`, { method: 'DELETE' }),
 };
 
+// ─── Team / Organization members ─────────────────────────────────────────────
+export const teamApi = {
+  /** List all org members */
+  listMembers: () =>
+    request('/team'),
+
+  /** Invite / create a new team member
+   *  body: { email, name, role, password? }
+   */
+  inviteMember: (data) =>
+    request('/team', { method: 'POST', body: JSON.stringify(data) }),
+
+  /** Update a member's role: { role } */
+  updateRole: (userId, role) =>
+    request(`/team/${userId}/role`, { method: 'PATCH', body: JSON.stringify({ role }) }),
+
+  /** Remove a member */
+  removeMember: (userId) =>
+    request(`/team/${userId}`, { method: 'DELETE' }),
+
+  /** Get businesses assigned to a member (identified by OrgMember.id) */
+  getMemberAssignments: (memberId) =>
+    request(`/team/${memberId}/assignments`),
+
+  /** Replace the full list of assigned businesses for a member */
+  setMemberAssignments: (memberId, bizIds) =>
+    request(`/team/${memberId}/assignments`, { method: 'PUT', body: JSON.stringify({ bizIds }) }),
+};
+
 // ─── Plan limits (client-side mirror of PLAN_LIMITS) ─────────────────────────
 export const PLAN_LIMITS = {
-  BASIC:      { maxBusinesses: 100,   maxImportsPerMonth: 3,  canUseBulkActions: false, canExportCsv: false, canUseEmailjs: false, canUseReminders: false },
-  FREELANCER: { maxBusinesses: 2000,  maxImportsPerMonth: 30, canUseBulkActions: true,  canExportCsv: true,  canUseEmailjs: true,  canUseReminders: true  },
-  AGENCY:     { maxBusinesses: -1,    maxImportsPerMonth: -1, canUseBulkActions: true,  canExportCsv: true,  canUseEmailjs: true,  canUseReminders: true  },
+  BASIC:      { maxBusinesses: 100,   maxImportsPerMonth: 3,  maxTeamMembers: 1,  canUseBulkActions: false, canExportCsv: false, canUseEmailjs: false, canUseReminders: false },
+  FREELANCER: { maxBusinesses: 2000,  maxImportsPerMonth: 30, maxTeamMembers: 3,  canUseBulkActions: true,  canExportCsv: true,  canUseEmailjs: true,  canUseReminders: true  },
+  AGENCY:     { maxBusinesses: -1,    maxImportsPerMonth: -1, maxTeamMembers: 25, canUseBulkActions: true,  canExportCsv: true,  canUseEmailjs: true,  canUseReminders: true  },
 };

@@ -21,7 +21,10 @@ enum PlanTier {
 enum OrgRole {
   OWNER
   ADMIN
-  MEMBER
+  MANAGER
+  TEAM_LEAD
+  SALES_REP
+  MEMBER      // kept for backward-compatibility
 }
 
 enum ContactStatus {
@@ -106,6 +109,8 @@ model OrgMember {
   user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   orgId  String
   org    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  assignments BusinessAssignment[]
 
   @@unique([userId, orgId])
   @@index([orgId])
@@ -203,10 +208,11 @@ model Business {
   importBatchId String?
   importBatch   ImportBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
 
-  contact   Contact?
-  tags      BusinessTag[]
-  reminders Reminder[]
-  emailLogs EmailLog[]
+  contact     Contact?
+  tags        BusinessTag[]
+  reminders   Reminder[]
+  emailLogs   EmailLog[]
+  assignments BusinessAssignment[]
 
   @@unique([orgId, name, phone])
   @@index([orgId])
@@ -321,6 +327,23 @@ model EmailLog {
 
   @@index([bizId])
   @@index([orgId, sentAt])
+}
+
+// ─── BUSINESS ASSIGNMENTS ────────────────────────────────────────────────────
+
+model BusinessAssignment {
+  id         String   @id @default(cuid())
+  assignedAt DateTime @default(now())
+  assignedBy String?  // userId of the admin who assigned
+
+  bizId    String
+  business Business  @relation(fields: [bizId], references: [id], onDelete: Cascade)
+  memberId String
+  member   OrgMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([bizId, memberId])
+  @@index([memberId])
+  @@index([bizId])
 }
 
 // ─── NOTIFICATIONS ─────────────────────────────────────────────────────────────────

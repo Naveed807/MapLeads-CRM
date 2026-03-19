@@ -5,7 +5,9 @@ import { ok } from '@mapleads/shared';
 export class BusinessController {
   async list(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const result = await businessService.list(req.org!.id, req.query as any);
+      const result = await businessService.list(
+        req.org!.id, req.query as any, req.user!.id, req.user!.role.toString(),
+      );
       res.json(ok(result));
     } catch (e) { next(e); }
   }

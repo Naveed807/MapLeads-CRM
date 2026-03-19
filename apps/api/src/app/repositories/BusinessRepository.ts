@@ -20,13 +20,15 @@ export class BusinessRepository extends BaseRepository<Business> {
       tag?:    string;
       sortBy:  string;
       sortDir: 'asc' | 'desc';
+      ids?:    string[];     // restrict to these business IDs (used for SALES_REP)
     },
   ) {
-    const { page, perPage, search, status, tag, sortBy, sortDir } = opts;
+    const { page, perPage, search, status, tag, sortBy, sortDir, ids } = opts;
 
     const where: Record<string, any> = {
       orgId,
-      ...(search && {
+      ...(ids      && { id:      { in: ids } }),
+      ...(search   && {
         OR: [
           { name:     { contains: search, mode: 'insensitive' } },
           { category: { contains: search, mode: 'insensitive' } },
