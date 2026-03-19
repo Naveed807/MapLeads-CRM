@@ -22,6 +22,9 @@ router.patch('/:id/status',    validate(updateContactStatusSchema), businessCont
 router.patch('/:id/note',      validate(updateNoteSchema),          businessController.updateNote.bind(businessController));
 router.patch('/:id/tags',      validate(updateTagsSchema),          businessController.updateTags.bind(businessController));
 router.delete('/:id',          businessController.delete.bind(businessController));
+router.get('/:id/assignee',    businessController.getAssignee.bind(businessController));
+router.put('/:id/assignee',    businessController.setAssignee.bind(businessController));
+router.get('/:id/logs',        businessController.getContactLogs.bind(businessController));
 
 // Bulk operations — require higher plan
 router.post('/bulk/status',    planGate('canUseBulkActions'), validate(bulkStatusSchema), businessController.bulkUpdateStatus.bind(businessController));

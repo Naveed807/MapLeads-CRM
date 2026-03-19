@@ -331,6 +331,20 @@ export default function App() {
 // ─── CRM shell ────────────────────────────────────────────────────────────────
 function CRMApp() {
   const { user, logout, isAdmin, planTier, orgRole, org } = useAuth();
+  const {
+    loaded, businesses, contacts, template, templates,
+    tags, importHistory, reminders, darkMode, countryCode,
+    emailSettings, emailSubject, emailBody,
+    selectedBizIds, stats, totalCount,
+    handleImport, handleDeleteImport, handleStatusChange, handleNoteChange,
+    handleTemplateSave, handleSaveNamedTemplate, handleDeleteTemplate, handleUseTemplate,
+    handleSetTags, handleSetReminder, handleDeleteReminder,
+    handleBulkStatusChange, handleBulkDelete,
+    toggleSelectBiz, selectAllBiz, clearSelection,
+    toggleDarkMode, handleCountryCodeChange, handleClearAll,
+    handleSaveEmailSettings, handleSendEmail,
+    teamMembers, handleAssign,
+  } = useAppData();
   const { tab: rawTab }                   = useParams();
   const routerNavigate                    = useNavigate();
   const tab                               = rawTab || "dashboard";
@@ -354,45 +368,6 @@ function CRMApp() {
   useOutsideClick(notifRef,   () => setNotifOpen(false));
   useOutsideClick(guideRef,   () => setGuideOpen(false));
   useOutsideClick(profileRef, () => setProfileOpen(false));
-
-  const {
-    loaded,
-    businesses,
-    contacts,
-    template,
-    templates,
-    tags,
-    importHistory,
-    reminders,
-    darkMode,
-    countryCode,
-    selectedBizIds,
-    stats,
-    handleImport,
-    handleDeleteImport,
-    handleStatusChange,
-    handleNoteChange,
-    handleTemplateSave,
-    handleSaveNamedTemplate,
-    handleDeleteTemplate,
-    handleUseTemplate,
-    handleSetTags,
-    handleSetReminder,
-    handleDeleteReminder,
-    handleBulkStatusChange,
-    handleBulkDelete,
-    toggleSelectBiz,
-    selectAllBiz,
-    clearSelection,
-    toggleDarkMode,
-    handleCountryCodeChange,
-    handleClearAll,
-    emailSettings,
-    emailSubject,
-    emailBody,
-    handleSaveEmailSettings,
-    handleSendEmail,
-  } = useAppData();
 
   const dark = darkMode;
 
@@ -669,6 +644,9 @@ function CRMApp() {
                 onSetReminder={handleSetReminder}
                 onDeleteReminder={handleDeleteReminder}
                 onSendEmail={handleSendEmail}
+                teamMembers={teamMembers}
+                orgRole={orgRole}
+                onAssign={handleAssign}
                 dark={dark}
               />
             )}

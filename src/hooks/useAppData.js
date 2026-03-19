@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { businessApi, importApi, templateApi } from '../services/crmApi';
+import { businessApi, importApi, templateApi, teamApi } from '../services/crmApi';
 import { DEFAULT_TEMPLATE, DEFAULT_EMAIL_SUBJECT, DEFAULT_EMAIL_BODY } from "../constants";
 import { sendEmailViaEmailJS, openMailto } from "../utils/emailer";
 import { swalConfirm, toast } from "../utils/dialog";
@@ -36,6 +36,7 @@ export function useAppData() {
   const [emailBody,      setEmailBodyState]    = useState(DEFAULT_EMAIL_BODY);
   const [selectedBizIds, setSelectedBizIds]   = useState(new Set());
   const [loaded,         setLoaded]           = useState(false);
+  const [teamMembers,    setTeamMembers]       = useState([]);
   // total from server (for pagination-aware counts)
   const [totalCount,     setTotalCount]       = useState(0);
 
@@ -91,6 +92,10 @@ export function useAppData() {
       setTemplates(tplList || []);
       const defaultTpl = (tplList || []).find((t) => t.isDefault && t.type === "whatsapp");
       setTemplateState(defaultTpl?.body ?? DEFAULT_TEMPLATE);
+
+      // Load team members (silently ignore if plan doesn't allow or if not auth'd)
+      const members = await teamApi.listMembers().catch(() => []);
+      setTeamMembers(members || []);
 
       setLoaded(true);
     })().catch((err) => {
@@ -200,6 +205,11 @@ export function useAppData() {
     const { getAllReminders } = require("../db");
     setReminders(await getAllReminders());
   }, [idbDeleteReminder]);
+
+  // ── Lead assignment
+  const handleAssign = useCallback(async (bizId, memberId) => {
+    await businessApi.setAssignee(bizId, memberId || null);
+  }, []);
 
   // ── Bulk actions
   const handleBulkStatusChange = useCallback(async (ids, status) => {
@@ -313,5 +323,6 @@ export function useAppData() {
     toggleSelectBiz, selectAllBiz, clearSelection,
     toggleDarkMode, handleCountryCodeChange, handleClearAll,
     handleSaveEmailSettings, handleSendEmail,
+    teamMembers, handleAssign,
   };
 }

@@ -45,7 +45,7 @@ export class BusinessService {
     return biz;
   }
 
-  async updateStatus(bizId: string, orgId: string, status: ContactStatus) {
+  async updateStatus(bizId: string, orgId: string, status: ContactStatus, userId?: string) {
     const biz = await businessRepository.findByIdAndOrg(bizId, orgId);
     if (!biz) throw new NotFoundError('Business');
 
@@ -54,10 +54,64 @@ export class BusinessService {
     if (status === 'REPLIED')    timestamps.repliedAt   = new Date();
     if (status === 'CONVERTED')  timestamps.convertedAt = new Date();
 
-    return prisma.contact.upsert({
-      where:  { bizId },
-      create: { bizId, status: status as any, ...timestamps },
-      update: { status: status as any, ...timestamps },
+    const [contact] = await prisma.$transaction([
+      prisma.contact.upsert({
+        where:  { bizId },
+        create: { bizId, status: status as any, ...timestamps },
+        update: { status: status as any, ...timestamps },
+      }),
+      prisma.contactLog.create({
+        data: { bizId, orgId, userId: userId ?? null, action: 'status_changed', detail: status },
+      }),
+    ]);
+    return contact;
+  }
+
+  async getAssignee(bizId: string, orgId: string) {
+    const biz = await businessRepository.findByIdAndOrg(bizId, orgId);
+    if (!biz) throw new NotFoundError('Business');
+    return prisma.businessAssignment.findFirst({
+      where:   { bizId },
+      include: { member: { include: { user: { select: { id: true, name: true, email: true, avatarUrl: true } } } } },
+      orderBy: { assignedAt: 'desc' },
+    });
+  }
+
+  async setAssignee(bizId: string, orgId: string, memberId: string | null, assignedById: string) {
+    const biz = await businessRepository.findByIdAndOrg(bizId, orgId);
+    if (!biz) throw new NotFoundError('Business');
+
+    let assigneeName: string | null = null;
+    await prisma.$transaction(async (tx) => {
+      await tx.businessAssignment.deleteMany({ where: { bizId } });
+      if (memberId) {
+        const member = await tx.orgMember.findUnique({
+          where:   { id: memberId },
+          include: { user: { select: { name: true } } },
+        });
+        if (!member || member.orgId !== orgId) throw new ForbiddenError('Member not found in this organization');
+        assigneeName = member.user.name;
+        await tx.businessAssignment.create({ data: { bizId, memberId, assignedBy: assignedById } });
+      }
+      const actor = await tx.user.findUnique({ where: { id: assignedById }, select: { name: true } });
+      await tx.contactLog.create({
+        data: {
+          bizId, orgId, userId: assignedById, action: 'assigned',
+          detail: memberId ? `Assigned to ${assigneeName}` : `Unassigned by ${actor?.name ?? 'Admin'}`,
+        },
+      });
+    });
+    return this.getAssignee(bizId, orgId);
+  }
+
+  async getContactLogs(bizId: string, orgId: string) {
+    const biz = await businessRepository.findByIdAndOrg(bizId, orgId);
+    if (!biz) throw new NotFoundError('Business');
+    return prisma.contactLog.findMany({
+      where:   { bizId, orgId },
+      include: { user: { select: { id: true, name: true, avatarUrl: true } } },
+      orderBy: { createdAt: 'desc' },
+      take:    50,
     });
   }
 

@@ -72,6 +72,7 @@ model User {
   memberships    OrgMember[]
   sessions       Session[]
   passwordResets PasswordReset[]
+  contactLogs    ContactLog[]
 
   @@index([email])
 }
@@ -96,6 +97,7 @@ model Organization {
   emailSetting  EmailSetting?
   emailLogs     EmailLog[]
   notifications Notification[]
+  contactLogs   ContactLog[]
 
   @@index([slug])
 }
@@ -213,6 +215,7 @@ model Business {
   reminders   Reminder[]
   emailLogs   EmailLog[]
   assignments BusinessAssignment[]
+  contactLogs ContactLog[]
 
   @@unique([orgId, name, phone])
   @@index([orgId])
@@ -344,6 +347,25 @@ model BusinessAssignment {
   @@unique([bizId, memberId])
   @@index([memberId])
   @@index([bizId])
+}
+
+// ─── CONTACT ACTIVITY LOG ───────────────────────────────────────────────────
+
+model ContactLog {
+  id        String   @id @default(cuid())
+  action    String   // "status_changed" | "assigned"
+  detail    String?  // human-readable context, e.g. "CONTACTED" or "Assigned to John"
+  createdAt DateTime @default(now())
+
+  bizId    String
+  business Business     @relation(fields: [bizId], references: [id], onDelete: Cascade)
+  orgId    String
+  org      Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  userId   String?
+  user     User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([bizId, createdAt])
+  @@index([orgId])
 }
 
 // ─── NOTIFICATIONS ─────────────────────────────────────────────────────────────────

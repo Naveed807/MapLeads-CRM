@@ -38,6 +38,7 @@ export default function BusinessesView({
   onStatusChange, onNoteChange, onTagsChange, onSetReminder, onDeleteReminder,
   selectedBizIds, onToggleSelect, onSelectAll, onClearSelection,
   onBulkStatusChange, onBulkDelete, onSendEmail,
+  teamMembers, orgRole, onAssign,
   dark,
 }) {
   const [search,       setSearch]       = useState("");
@@ -230,6 +231,9 @@ export default function BusinessesView({
                 onToggle={() => setExpanded(expanded === biz.id ? null : biz.id)}
                 isSelected={selectedBizIds.has(biz.id)}
                 onToggleSelect={onToggleSelect}
+                teamMembers={teamMembers || []}
+                orgRole={orgRole}
+                onAssign={onAssign}
                 dark={dark}
               />
             ))}

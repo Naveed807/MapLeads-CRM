@@ -21,7 +21,9 @@ export class BusinessController {
 
   async updateStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const biz = await businessService.updateStatus(req.params.id as string, req.org!.id, req.body.status);
+      const biz = await businessService.updateStatus(
+        req.params.id as string, req.org!.id, req.body.status, req.user!.id,
+      );
       res.json(ok(biz));
     } catch (e) { next(e); }
   }
@@ -60,6 +62,29 @@ export class BusinessController {
       const planTier = (req.org!.subscription?.plan as any)?.tier ?? 'BASIC';
       const count = await businessService.bulkDelete(req.org!.id, req.body, planTier);
       res.json(ok({ count }, `${count} records deleted`));
+    } catch (e) { next(e); }
+  }
+
+  async getAssignee(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const assignee = await businessService.getAssignee(String(req.params.id), req.org!.id);
+      res.json(ok(assignee));
+    } catch (e) { next(e); }
+  }
+
+  async setAssignee(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const assignee = await businessService.setAssignee(
+        String(req.params.id), req.org!.id, req.body.memberId ?? null, req.user!.id,
+      );
+      res.json(ok(assignee, 'Assignee updated'));
+    } catch (e) { next(e); }
+  }
+
+  async getContactLogs(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const logs = await businessService.getContactLogs(String(req.params.id), req.org!.id);
+      res.json(ok(logs));
     } catch (e) { next(e); }
   }
 

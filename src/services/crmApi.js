@@ -91,6 +91,9 @@ export const businessApi = {
   bulkUpdateStatus:  (ids, status) => request('/businesses/bulk/status',   { method: 'POST', body: JSON.stringify({ ids, status }) }),
   bulkDelete:        (ids)         => request('/businesses/bulk/delete',   { method: 'POST', body: JSON.stringify({ ids }) }),
   clearAll:          ()            => request('/businesses',               { method: 'DELETE' }),
+  getAssignee:       (id)          => request(`/businesses/${id}/assignee`),
+  setAssignee:       (id, memberId)=> request(`/businesses/${id}/assignee`, { method: 'PUT', body: JSON.stringify({ memberId: memberId ?? null }) }),
+  getContactLogs:    (id)          => request(`/businesses/${id}/logs`),
 };
 
 // ─── Imports ──────────────────────────────────────────────────────────────────

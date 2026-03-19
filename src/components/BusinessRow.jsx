@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Badge from "./Badge";
 import { STATUS_CONFIG } from "../constants";
 import { buildWhatsAppLink } from "../utils/whatsapp";
 import { toast } from "../utils/dialog";
+import { businessApi } from "../services/crmApi";
 import {
   MessageCircle, Map, Tag, Bell, BellOff,
   ChevronDown, ChevronUp, Globe, MapPin, Clock,
-  CalendarClock, ExternalLink, Mail,
+  CalendarClock, ExternalLink, Mail, UserCircle, History,
 } from "lucide-react";
 
 function TagInput({ tags, onChange, dark }) {
@@ -45,7 +46,9 @@ export default function BusinessRow({
   biz, contact, template, countryCode,
   onStatusChange, onNoteChange, onTagsChange, onSetReminder, onDeleteReminder,
   onSendEmail,
-  bizTags, reminder, isExpanded, onToggle, isSelected, onToggleSelect, dark,
+  bizTags, reminder, isExpanded, onToggle, isSelected, onToggleSelect,
+  teamMembers, orgRole, onAssign,
+  dark,
 }) {
   const waLink = biz.phone ? buildWhatsAppLink(biz.phone, template, biz, countryCode) : null;
   const status = contact?.status || "not_contacted";
@@ -55,6 +58,39 @@ export default function BusinessRow({
   const [reminderNote, setReminderNote] = useState(reminder?.note || "");
   const [emailSending, setEmailSending] = useState(false);
   const [emailStatus,  setEmailStatus]  = useState(null);
+  const [assignee,     setAssignee]     = useState(undefined); // undefined = not loaded
+  const [logs,         setLogs]         = useState(null);      // null = not loaded
+  const [assigning,    setAssigning]    = useState(false);
+
+  const canManage = ['OWNER', 'ADMIN', 'MANAGER', 'TEAM_LEAD'].includes(orgRole);
+
+  // Load assignee + logs lazily when row is expanded (managerial roles only)
+  useEffect(() => {
+    if (!isExpanded || !canManage) return;
+    businessApi.getAssignee(biz.id)
+      .then(data => setAssignee(data))
+      .catch(() => setAssignee(null));
+    businessApi.getContactLogs(biz.id)
+      .then(data => setLogs(data || []))
+      .catch(() => setLogs([]));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isExpanded]);
+
+  async function handleAssignChange(memberId) {
+    setAssigning(true);
+    try {
+      await onAssign(biz.id, memberId || null);
+      const updated = await businessApi.getAssignee(biz.id);
+      setAssignee(updated);
+      const updatedLogs = await businessApi.getContactLogs(biz.id);
+      setLogs(updatedLogs || []);
+      toast.success(memberId ? "Lead assigned." : "Lead unassigned.");
+    } catch {
+      toast.error("Failed to update assignee.");
+    } finally {
+      setAssigning(false);
+    }
+  }
 
   const th = dark ? "#e2e8f0" : "#0f172a";
   const ts = dark ? "#94a3b8" : "#94a3b8";
@@ -216,6 +252,62 @@ export default function BusinessRow({
             placeholder="Add notes about this business..."
             style={{ width: "100%", height: 70, padding: 10, borderRadius: 8, border: `1px solid ${dark ? "#334155" : "#e2e8f0"}`, fontSize: 12, color: dark ? "#e2e8f0" : "#334155", resize: "none", outline: "none", fontFamily: "inherit", boxSizing: "border-box", background: dark ? "#1e293b" : "#fff" }}
           />
+
+          {/* Assignee (managerial roles only) */}
+          {canManage && (
+            <div style={{ marginTop: 14, borderTop: `1px solid ${dark ? "#1e293b" : "#f1f5f9"}`, paddingTop: 14 }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: ts, display: "flex", alignItems: "center", gap: 4, marginBottom: 6 }}>
+                <UserCircle size={11} />Assigned To
+              </label>
+              {teamMembers && teamMembers.length > 0 ? (
+                <select
+                  value={assignee?.memberId || ""}
+                  onChange={(e) => handleAssignChange(e.target.value)}
+                  disabled={assigning}
+                  style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: `1px solid ${dark ? "#334155" : "#e2e8f0"}`, fontSize: 12, color: dark ? "#e2e8f0" : "#334155", background: dark ? "#1e293b" : "#fff", outline: "none", opacity: assigning ? 0.6 : 1 }}
+                >
+                  <option value="">— Unassigned —</option>
+                  {teamMembers.map(m => (
+                    <option key={m.id} value={m.id}>
+                      {m.user?.name} ({m.role})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div style={{ fontSize: 11, color: ts, fontStyle: "italic" }}>
+                  {assignee === undefined ? "Loading…" : assignee ? assignee.member?.user?.name : "Unassigned"}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Contact History (managerial roles only) */}
+          {canManage && (
+            <div style={{ marginTop: 14, borderTop: `1px solid ${dark ? "#1e293b" : "#f1f5f9"}`, paddingTop: 14 }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: ts, display: "flex", alignItems: "center", gap: 4, marginBottom: 8 }}>
+                <History size={11} />Contact History
+              </label>
+              {logs === null ? (
+                <div style={{ fontSize: 11, color: ts }}>Loading…</div>
+              ) : logs.length === 0 ? (
+                <div style={{ fontSize: 11, color: ts, fontStyle: "italic" }}>No activity yet.</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 160, overflowY: "auto" }}>
+                  {logs.map(log => (
+                    <div key={log.id} style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "6px 10px", borderRadius: 7, background: dark ? "#0f172a" : "#f8fafc" }}>
+                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: log.action === "status_changed" ? "#6366f1" : "#f59e0b", marginTop: 5, flexShrink: 0 }} />
+                      <div>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: th }}>{log.detail || log.action}</div>
+                        <div style={{ fontSize: 10, color: ts }}>
+                          {log.user ? log.user.name : "System"} · {new Date(log.createdAt).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
