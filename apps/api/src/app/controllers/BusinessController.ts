@@ -49,7 +49,8 @@ export class BusinessController {
 
   async bulkUpdateStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const count = await businessService.bulkUpdateStatus(req.org!.id, req.body.ids, req.body.status);
+      const planTier = (req.org!.subscription?.plan as any)?.tier ?? 'BASIC';
+      const count = await businessService.bulkUpdateStatus(req.org!.id, req.body, planTier);
       res.json(ok({ count }, `${count} records updated`));
     } catch (e) { next(e); }
   }
@@ -57,7 +58,7 @@ export class BusinessController {
   async bulkDelete(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const planTier = (req.org!.subscription?.plan as any)?.tier ?? 'BASIC';
-      const count = await businessService.bulkDelete(req.org!.id, req.body.ids, planTier);
+      const count = await businessService.bulkDelete(req.org!.id, req.body, planTier);
       res.json(ok({ count }, `${count} records deleted`));
     } catch (e) { next(e); }
   }

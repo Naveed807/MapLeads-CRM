@@ -11,6 +11,7 @@
     "migrate:deploy": "prisma migrate deploy",
     "studio": "prisma studio",
     "seed": "ts-node src/database/seeders/index.ts",
+    "db:set-plan": "ts-node src/scripts/set-plan.ts",
     "generate": "prisma generate",
     "lint": "eslint src --ext .ts",
     "test": "jest --passWithNoTests",
