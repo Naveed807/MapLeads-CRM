@@ -39,8 +39,9 @@ export default function BusinessesView({
   selectedBizIds, onToggleSelect, onSelectAll, onClearSelection,
   onBulkStatusChange, onBulkDelete, onSendEmail,
   teamMembers, orgRole, onAssign,
-  dark,
+  dark, planTier,
 }) {
+  const canExport = planTier && planTier !== "BASIC";
   const [search,       setSearch]       = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterTag,    setFilterTag]    = useState("");
@@ -159,10 +160,18 @@ export default function BusinessesView({
         <span style={{ fontSize: 13, color: ts, whiteSpace: "nowrap" }}>
           {filtered.length} of {businesses.length}
         </span>
-        <button onClick={handleExport}
-          style={{ background: dark ? "#1e293b" : "#f0fdf4", color: "#16a34a", border: `1px solid ${dark ? "#334155" : "#bbf7d0"}`, borderRadius: 8, padding: "9px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
-          <Download size={14} />Export CSV
-        </button>
+        {canExport ? (
+          <button onClick={handleExport}
+            style={{ background: dark ? "#1e293b" : "#f0fdf4", color: "#16a34a", border: `1px solid ${dark ? "#334155" : "#bbf7d0"}`, borderRadius: 8, padding: "9px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
+            <Download size={14} />Export CSV
+          </button>
+        ) : (
+          <div title="Export CSV is available on Freelancer and Agency plans"
+            style={{ background: dark ? "#0f172a" : "#f8fafc", color: dark ? "#475569" : "#94a3b8", border: `1px solid ${dark ? "#1e293b" : "#e2e8f0"}`, borderRadius: 8, padding: "9px 14px", fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", cursor: "not-allowed", userSelect: "none" }}>
+            <Download size={14} />Export CSV
+            <span style={{ fontSize: 10, fontWeight: 700, background: "#6366f1", color: "#fff", borderRadius: 4, padding: "1px 5px", marginLeft: 2 }}>PRO</span>
+          </div>
+        )}
       </div>
 
       {/* Bulk action bar */}

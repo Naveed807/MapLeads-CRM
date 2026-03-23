@@ -671,6 +671,7 @@ function CRMApp() {
                 orgRole={orgRole}
                 onAssign={handleAssign}
                 dark={dark}
+                planTier={planTier}
               />
             )}
 
