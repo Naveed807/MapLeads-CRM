@@ -339,14 +339,12 @@ export default function PricingView({ dark, planTier }) {
                       : <>{isUpgrade ? "Upgrade" : "Switch"} to {plan.name} →</>}
                   </button>
                 ) : (
-                  /* Downgrade to free — open portal to cancel */
+                  /* No Stripe price ID yet — show upgrade button */
                   <button
-                    onClick={handleManage}
-                    disabled={portalLoading}
-                    style={{ width: "100%", padding: "11px", background: dark ? "#1e293b" : "#f1f5f9", color: ts, border: `1px solid ${border}`, borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: portalLoading ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                    disabled
+                    style={{ width: "100%", padding: "11px", background: meta.color + "22", color: meta.color, border: `1px solid ${meta.color}40`, borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
                   >
-                    {portalLoading ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : null}
-                    Downgrade to Free
+                    Upgrade to {plan.name}
                   </button>
                 )}
               </div>
