@@ -98,15 +98,23 @@ export default function ImportView({ onImport, onDeleteImport, importHistory, co
 
   async function handleConfirm() {
     setLoading(true);
-    const { added, skipped } = await onImport(preview, "google_maps");
-    setLoading(false);
-    setResult({ added, skipped });
-    setHtml(""); setPreview(null);
-    refreshUsage();
-    if (added > 0) {
-      toast.success(`Imported ${added} business${added === 1 ? "" : "es"}${skipped ? ` (${skipped} skipped)` : ""}.`);
-    } else {
-      toast.warning(`No new businesses added${skipped ? ` — ${skipped} already exist` : ""}.`);
+    setError("");
+    try {
+      const { added, skipped } = await onImport(preview, "google_maps");
+      setResult({ added, skipped });
+      setHtml(""); setPreview(null);
+      refreshUsage();
+      if (added > 0) {
+        toast.success(`Imported ${added} business${added === 1 ? "" : "es"}${skipped ? ` (${skipped} skipped)` : ""}.`);
+      } else {
+        toast.warning(`No new businesses added${skipped ? ` — ${skipped} already exist` : ""}.`);
+      }
+    } catch (err) {
+      const msg = err?.message || "Import failed. Please try again.";
+      setError(msg);
+      refreshUsage();
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -141,16 +149,24 @@ export default function ImportView({ onImport, onDeleteImport, importHistory, co
   async function handleExcelConfirm() {
     if (!xlPreview?.businesses?.length) return;
     setXlLoading(true);
-    const { added, skipped } = await onImport(xlPreview.businesses, "excel");
-    setXlLoading(false);
-    setXlResult({ added, skipped });
-    setXlFile(null); setXlPreview(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-    refreshUsage();
-    if (added > 0) {
-      toast.success(`Imported ${added} business${added === 1 ? "" : "es"}${skipped ? ` (${skipped} skipped)` : ""}.`);
-    } else {
-      toast.warning(`No new businesses added${skipped ? ` — ${skipped} already exist` : ""}.`);
+    setXlError("");
+    try {
+      const { added, skipped } = await onImport(xlPreview.businesses, "excel");
+      setXlResult({ added, skipped });
+      setXlFile(null); setXlPreview(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      refreshUsage();
+      if (added > 0) {
+        toast.success(`Imported ${added} business${added === 1 ? "" : "es"}${skipped ? ` (${skipped} skipped)` : ""}.`);
+      } else {
+        toast.warning(`No new businesses added${skipped ? ` — ${skipped} already exist` : ""}.`);
+      }
+    } catch (err) {
+      const msg = err?.message || "Import failed. Please try again.";
+      setXlError(msg);
+      refreshUsage();
+    } finally {
+      setXlLoading(false);
     }
   }
 
