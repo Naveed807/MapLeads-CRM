@@ -114,7 +114,7 @@ export const templateApi = {
   create:     (data)     => request('/templates',          { method: 'POST',  body: JSON.stringify(data) }),
   update:     (id, data) => request(`/templates/${id}`,    { method: 'PATCH', body: JSON.stringify(data) }),
   delete:     (id)       => request(`/templates/${id}`,    { method: 'DELETE' }),
-  setDefault: (id)       => request(`/templates/${id}/default`, { method: 'PATCH' }),
+  setDefault: (id)       => request(`/templates/${id}/set-default`, { method: 'PATCH' }),
 };
 
 // ─── Email settings ───────────────────────────────────────────────────────────
