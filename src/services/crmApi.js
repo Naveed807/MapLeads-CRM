@@ -161,6 +161,18 @@ export const teamApi = {
     request(`/team/${memberId}/assignments`, { method: 'PUT', body: JSON.stringify({ bizIds }) }),
 };
 
+// ─── Billing / Subscriptions ─────────────────────────────────────────────────
+export const billingApi = {
+  /** All available plans ordered by price */
+  getPlans:        ()        => request('/billing/plans'),
+  /** Current org subscription (includes plan) */
+  getSubscription: ()        => request('/billing/subscription'),
+  /** Create Stripe Checkout session — pass the plan's stripePriceId */
+  createCheckout:  (priceId) => request('/billing/checkout', { method: 'POST', body: JSON.stringify({ planId: priceId }) }),
+  /** Open Stripe Customer Portal for managing / cancelling subscription */
+  createPortal:    ()        => request('/billing/portal',   { method: 'POST' }),
+};
+
 // ─── Plan limits (client-side mirror of PLAN_LIMITS) ─────────────────────────
 export const PLAN_LIMITS = {
   BASIC:      { maxBusinesses: 100,   maxImportsPerCycle: 100, maxTeamMembers: 1,  maxTemplates: 2,  canUseBulkActions: false, canExportCsv: false, canUseEmailjs: false, canUseReminders: false },

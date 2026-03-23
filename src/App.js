@@ -15,6 +15,7 @@ import ImportView        from "./components/ImportView";
 import TemplateView      from "./components/TemplateView";
 import EmailSettingsView from "./components/EmailSettingsView";
 import UsersView         from "./components/UsersView";
+import PricingView       from "./components/PricingView";
 import {
   LayoutDashboard, Building2, Upload, MessageSquare,
   Trash2, Moon, Sun, Mail, LogOut, ShieldCheck,
@@ -38,6 +39,7 @@ const MAIN_NAV = [
 const SETTINGS_NAV = [
   { id: "template", label: "Templates",      Icon: MessageSquare, hiddenForRoles: ["TEAM_LEAD", "SALES_REP", "MEMBER"] },
   { id: "email",    label: "Email Settings", Icon: Mail,          hiddenForRoles: ["TEAM_LEAD", "SALES_REP", "MEMBER"] },
+  { id: "billing",  label: "Plans & Billing", Icon: Zap,           hiddenForRoles: ["TEAM_LEAD", "SALES_REP", "MEMBER"] },
 ];
 
 const PLAN_LABELS = { BASIC: "Basic Plan", FREELANCER: "Freelancer Plan", AGENCY: "Agency Plan" };
@@ -49,6 +51,7 @@ const PAGE_TITLES = {
   template:   "Templates",
   email:      "Email Settings",
   users:      "Team & Organization",
+  billing:    "Plans & Billing",
 };
 
 // Map notification type → icon + colour
@@ -321,6 +324,9 @@ export default function App() {
           {/* Admin routes */}
           <Route path="/admin/dashboard" element={<ProtectedRoute requireAdmin><CRMApp isAdmin /></ProtectedRoute>} />
 
+          {/* Stripe return URL redirect */}
+          <Route path="/billing" element={<BillingRedirect />} />
+
           {/* Default redirect */}
           <Route path="/"  element={<Navigate to="/dashboard" replace />} />
           <Route path="*"  element={<Navigate to="/dashboard" replace />} />
@@ -328,6 +334,12 @@ export default function App() {
       </BrowserRouter>
     </AuthProvider>
   );
+}
+
+// ─── Stripe /billing redirect → /dashboard/billing (preserves ?success=1 etc)
+function BillingRedirect() {
+  const search = window.location.search;
+  return <Navigate to={`/dashboard/billing${search}`} replace />;
 }
 
 // ─── CRM shell ────────────────────────────────────────────────────────────────
@@ -701,6 +713,13 @@ function CRMApp() {
                 dark={dark}
                 user={{ ...user, role: orgRole, planTier }}
                 org={org}
+                planTier={planTier}
+              />
+            )}
+
+            {tab === "billing" && (
+              <PricingView
+                dark={dark}
                 planTier={planTier}
               />
             )}
