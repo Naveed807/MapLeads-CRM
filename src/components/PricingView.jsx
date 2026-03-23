@@ -6,19 +6,13 @@ import {
   HelpCircle, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { billingApi } from "../services/crmApi";
+import { FEATURE_ROWS, PLAN_DESCRIPTIONS, PLAN_HIGHLIGHTS } from "../constants/planFeatures";
 
-// ─── Feature rows shown on every plan card ────────────────────────────────────
-const FEATURE_ROWS = [
-  { key: "maxBusinesses",      label: "Businesses",         fmt: v => v === -1 ? "Unlimited" : v.toLocaleString(),     Icon: Building2   },
-  { key: "maxImportsPerMonth",  label: "Imports / month",    fmt: v => v === -1 ? "Unlimited" : v.toLocaleString(),     Icon: Upload      },
-  { key: "maxTeamMembers",     label: "Team members",       fmt: v => v === -1 ? "Unlimited" : String(v),              Icon: Users       },
-  { key: "maxTemplates",       label: "Templates",          fmt: v => v === -1 ? "Unlimited" : String(v),              Icon: FileText    },
-  { key: "canExportCsv",       label: "CSV Export",         fmt: null,                                                  Icon: Download    },
-  { key: "canUseEmailjs",      label: "Email Campaigns",    fmt: null,                                                  Icon: Mail        },
-  { key: "canUseBulkActions",  label: "Bulk Actions",       fmt: null,                                                  Icon: BarChart3   },
-  { key: "canUseReminders",    label: "Reminders",          fmt: null,                                                  Icon: HelpCircle  },
-  { key: "canUseApiAccess",    label: "API Access",         fmt: null,                                                  Icon: Key         },
-];
+// ─── Icon map — add here if you add new icons in planFeatures.js ──────────────
+// ─── Icon map — add here if you add new icons in planFeatures.js ──────────────
+const ICON_MAP = {
+  Building2, Users, FileText, Upload, Mail, BarChart3, Key, Download, HelpCircle,
+};
 
 const TIER_META = {
   BASIC:      { color: "#64748b", accent: "#f1f5f9", badgeBg: "#f1f5f9", badgeColor: "#64748b", label: "Basic",      popular: false, badge: null              },
@@ -272,7 +266,10 @@ export default function PricingView({ dark, planTier }) {
                     </span>
                   )}
                 </div>
-                <div style={{ fontWeight: 800, fontSize: 17, color: th, marginBottom: 4 }}>{plan.name}</div>
+                <div style={{ fontWeight: 800, fontSize: 17, color: th, marginBottom: 2 }}>{plan.name}</div>
+                {PLAN_DESCRIPTIONS[plan.tier] && (
+                  <p style={{ fontSize: 12, color: ts, margin: "0 0 10px" }}>{PLAN_DESCRIPTIONS[plan.tier]}</p>
+                )}
                 <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
                   <span style={{ fontSize: 32, fontWeight: 900, color: meta.color }}>
                     {plan.monthlyPriceUsd ? `$${(plan.monthlyPriceUsd / 100).toFixed(0)}` : "Free"}
@@ -286,8 +283,19 @@ export default function PricingView({ dark, planTier }) {
 
               {/* Feature list */}
               <div style={{ padding: "18px 24px" }}>
+                {/* Highlight bullets */}
+                {(PLAN_HIGHLIGHTS[plan.tier] || []).length > 0 && (
+                  <div style={{ marginBottom: 14, display: "flex", flexDirection: "column", gap: 6 }}>
+                    {PLAN_HIGHLIGHTS[plan.tier].map((hl, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: meta.color, fontWeight: 600 }}>
+                        <Check size={12} color={meta.color} strokeWidth={3} />{hl}
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
-                  {FEATURE_ROWS.map(({ key, label, fmt, Icon: FIcon }) => {
+                  {FEATURE_ROWS.map(({ key, label, fmt, icon }) => {
+                    const FIcon   = ICON_MAP[icon];
                     const val     = plan[key];
                     const isNum   = fmt !== null;
                     const enabled = isNum ? (val != null) : !!val;
