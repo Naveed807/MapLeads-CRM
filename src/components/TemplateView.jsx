@@ -20,6 +20,7 @@ export default function TemplateView({ template, onTemplateSave, templates, onSa
   const [savedOk,   setSavedOk]   = useState(false);
   const [namedOk,   setNamedOk]   = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [loadedTemplateId, setLoadedTemplateId] = useState(null);
 
   // Keep editor in sync when the active template changes externally
   // (e.g. after switching via library or on first load)
@@ -39,7 +40,7 @@ export default function TemplateView({ template, onTemplateSave, templates, onSa
   async function handleSave() {
     setSaveError("");
     try {
-      await onTemplateSave(body);
+      await onTemplateSave(body, loadedTemplateId);
       setSavedOk(true);
       setTimeout(() => setSavedOk(false), 2000);
     } catch (err) {
@@ -60,11 +61,10 @@ export default function TemplateView({ template, onTemplateSave, templates, onSa
     }
   }
 
-  // Load a library template into the editor AND persist it as the active template
-  async function handleUse(tmplBody) {
-    setBody(tmplBody);
-    await onTemplateSave(tmplBody);  // persists to DB as active
-    onUseTemplate(tmplBody);         // updates useAppData state
+  // Load a library template into the editor (does NOT mark it active — user must click "Set as Active")
+  function handleUse(tmpl) {
+    setBody(tmpl.body);
+    setLoadedTemplateId(tmpl.id);
   }
 
   return (
@@ -162,7 +162,7 @@ export default function TemplateView({ template, onTemplateSave, templates, onSa
 
           <div style={{ maxHeight: 480, overflowY: "auto" }}>
             {(templates || []).map((t) => {
-              const isActive = t.body === template;
+              const isActive = t.isDefault;
               return (
                 <div key={t.id} style={{ padding: "14px 16px", borderBottom: `1px solid ${dark ? "#0f172a" : "#f8fafc"}`, background: isActive ? (dark ? "#1e1b4b" : "#eef2ff") : "transparent" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
@@ -177,7 +177,7 @@ export default function TemplateView({ template, onTemplateSave, templates, onSa
                   </div>
                   <p style={{ fontSize: 12, color: ts, margin: "0 0 10px", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{t.body}</p>
                   {!isActive && (
-                    <button onClick={() => handleUse(t.body)}
+                    <button onClick={() => handleUse(t)}
                       style={{ background: purpleBg, color: "#6366f1", border: "none", borderRadius: 6, padding: "5px 12px", fontWeight: 700, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
                       <ChevronRight size={12} />Use this template
                     </button>

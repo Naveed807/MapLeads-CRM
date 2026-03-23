@@ -154,16 +154,25 @@ export function useAppData() {
   }, [refreshBusinesses]);
 
   // ── Templates
-  const handleTemplateSave = useCallback(async (body) => {
+  const handleTemplateSave = useCallback(async (body, templateId) => {
     setTemplateState(body);
-    // Persist as default whatsapp template on the server
-    const existing = templates.find((t) => t.isDefault && t.type === "whatsapp");
-    if (existing) {
-      await templateApi.update(existing.id, { body });
+    if (templateId) {
+      // Activating a specific library template — update its body if edited, then set as default
+      const tpl = templates.find((t) => t.id === templateId);
+      if (tpl && tpl.body !== body) {
+        await templateApi.update(templateId, { body });
+      }
+      await templateApi.setDefault(templateId);
     } else {
-      await templateApi.create({ name: "Default", body, type: "whatsapp", isDefault: true });
-      setTemplates(await templateApi.list());
+      // Free-text in editor: update or create the "Default" template
+      const existing = templates.find((t) => t.isDefault && t.type === "whatsapp");
+      if (existing) {
+        await templateApi.update(existing.id, { body });
+      } else {
+        await templateApi.create({ name: "Default", body, type: "whatsapp", isDefault: true });
+      }
     }
+    setTemplates(await templateApi.list());
   }, [templates]);
 
   const handleSaveNamedTemplate = useCallback(async (name, body) => {
