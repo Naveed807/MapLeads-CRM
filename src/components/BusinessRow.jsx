@@ -48,11 +48,17 @@ export default function BusinessRow({
   onSendEmail,
   bizTags, reminder, isExpanded, onToggle, isSelected, onToggleSelect,
   teamMembers, orgRole, onAssign,
-  dark,
+  dark, planTier,
 }) {
   const waLink = biz.phone ? buildWhatsAppLink(biz.phone, template, biz, countryCode) : null;
   const status = contact?.status || "not_contacted";
   const [note, setNote]               = useState(contact?.note || "");
+
+  // Keep note in sync when the server refresh updates the contact prop
+  useEffect(() => {
+    setNote(contact?.note || "");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contact?.note]);
   const [showReminder, setShowReminder] = useState(false);
   const [reminderDate, setReminderDate] = useState(reminder?.dueDate?.slice(0,10) || "");
   const [reminderNote, setReminderNote] = useState(reminder?.note || "");
@@ -62,7 +68,8 @@ export default function BusinessRow({
   const [logs,         setLogs]         = useState(null);      // null = not loaded
   const [assigning,    setAssigning]    = useState(false);
 
-  const canManage = ['OWNER', 'ADMIN', 'MANAGER', 'TEAM_LEAD'].includes(orgRole);
+  const canManage  = ['OWNER', 'ADMIN', 'MANAGER', 'TEAM_LEAD'].includes(orgRole);
+  const isPaidPlan = planTier && planTier !== 'BASIC';
 
   // Load assignee + logs lazily when row is expanded (managerial roles only)
   useEffect(() => {
@@ -253,57 +260,73 @@ export default function BusinessRow({
             style={{ width: "100%", height: 70, padding: 10, borderRadius: 8, border: `1px solid ${dark ? "#334155" : "#e2e8f0"}`, fontSize: 12, color: dark ? "#e2e8f0" : "#334155", resize: "none", outline: "none", fontFamily: "inherit", boxSizing: "border-box", background: dark ? "#1e293b" : "#fff" }}
           />
 
-          {/* Assignee (managerial roles only) */}
+          {/* Assignee */}
           {canManage && (
             <div style={{ marginTop: 14, borderTop: `1px solid ${dark ? "#1e293b" : "#f1f5f9"}`, paddingTop: 14 }}>
               <label style={{ fontSize: 11, fontWeight: 600, color: ts, display: "flex", alignItems: "center", gap: 4, marginBottom: 6 }}>
                 <UserCircle size={11} />Assigned To
               </label>
-              {teamMembers && teamMembers.length > 0 ? (
-                <select
-                  value={assignee?.memberId || ""}
-                  onChange={(e) => handleAssignChange(e.target.value)}
-                  disabled={assigning}
-                  style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: `1px solid ${dark ? "#334155" : "#e2e8f0"}`, fontSize: 12, color: dark ? "#e2e8f0" : "#334155", background: dark ? "#1e293b" : "#fff", outline: "none", opacity: assigning ? 0.6 : 1 }}
-                >
-                  <option value="">— Unassigned —</option>
-                  {teamMembers.map(m => (
-                    <option key={m.id} value={m.id}>
-                      {m.user?.name} ({m.role})
-                    </option>
-                  ))}
-                </select>
+              {isPaidPlan ? (
+                teamMembers && teamMembers.length > 0 ? (
+                  <select
+                    value={assignee?.memberId || ""}
+                    onChange={(e) => handleAssignChange(e.target.value)}
+                    disabled={assigning}
+                    style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: `1px solid ${dark ? "#334155" : "#e2e8f0"}`, fontSize: 12, color: dark ? "#e2e8f0" : "#334155", background: dark ? "#1e293b" : "#fff", outline: "none", opacity: assigning ? 0.6 : 1 }}
+                  >
+                    <option value="">— Unassigned —</option>
+                    {teamMembers.map(m => (
+                      <option key={m.id} value={m.id}>
+                        {m.user?.name} ({m.role})
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div style={{ fontSize: 11, color: ts, fontStyle: "italic" }}>
+                    {assignee === undefined ? "Loading…" : assignee ? assignee.member?.user?.name : "Unassigned"}
+                  </div>
+                )
               ) : (
-                <div style={{ fontSize: 11, color: ts, fontStyle: "italic" }}>
-                  {assignee === undefined ? "Loading…" : assignee ? assignee.member?.user?.name : "Unassigned"}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 8, background: dark ? "#0f172a" : "#f8fafc", border: `1px solid ${dark ? "#1e293b" : "#e2e8f0"}` }}>
+                  <UserCircle size={13} color={ts} />
+                  <span style={{ fontSize: 12, color: ts }}>Lead assignment is available on paid plans.</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, background: "#6366f1", color: "#fff", borderRadius: 4, padding: "1px 6px", marginLeft: "auto" }}>PRO</span>
                 </div>
               )}
             </div>
           )}
 
-          {/* Contact History (managerial roles only) */}
+          {/* Contact History */}
           {canManage && (
             <div style={{ marginTop: 14, borderTop: `1px solid ${dark ? "#1e293b" : "#f1f5f9"}`, paddingTop: 14 }}>
               <label style={{ fontSize: 11, fontWeight: 600, color: ts, display: "flex", alignItems: "center", gap: 4, marginBottom: 8 }}>
                 <History size={11} />Contact History
               </label>
-              {logs === null ? (
-                <div style={{ fontSize: 11, color: ts }}>Loading…</div>
-              ) : logs.length === 0 ? (
-                <div style={{ fontSize: 11, color: ts, fontStyle: "italic" }}>No activity yet.</div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 160, overflowY: "auto" }}>
-                  {logs.map(log => (
-                    <div key={log.id} style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "6px 10px", borderRadius: 7, background: dark ? "#0f172a" : "#f8fafc" }}>
-                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: log.action === "status_changed" ? "#6366f1" : "#f59e0b", marginTop: 5, flexShrink: 0 }} />
-                      <div>
-                        <div style={{ fontSize: 11, fontWeight: 600, color: th }}>{log.detail || log.action}</div>
-                        <div style={{ fontSize: 10, color: ts }}>
-                          {log.user ? log.user.name : "System"} · {new Date(log.createdAt).toLocaleString()}
+              {isPaidPlan ? (
+                logs === null ? (
+                  <div style={{ fontSize: 11, color: ts }}>Loading…</div>
+                ) : logs.length === 0 ? (
+                  <div style={{ fontSize: 11, color: ts, fontStyle: "italic" }}>No activity yet.</div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 160, overflowY: "auto" }}>
+                    {logs.map(log => (
+                      <div key={log.id} style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "6px 10px", borderRadius: 7, background: dark ? "#0f172a" : "#f8fafc" }}>
+                        <div style={{ width: 6, height: 6, borderRadius: "50%", background: log.action === "status_changed" ? "#6366f1" : "#f59e0b", marginTop: 5, flexShrink: 0 }} />
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: th }}>{log.detail || log.action}</div>
+                          <div style={{ fontSize: 10, color: ts }}>
+                            {log.user ? log.user.name : "System"} · {new Date(log.createdAt).toLocaleString()}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                )
+              ) : (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 8, background: dark ? "#0f172a" : "#f8fafc", border: `1px solid ${dark ? "#1e293b" : "#e2e8f0"}` }}>
+                  <History size={13} color={ts} />
+                  <span style={{ fontSize: 12, color: ts }}>Contact history is available on paid plans.</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, background: "#6366f1", color: "#fff", borderRadius: 4, padding: "1px 6px", marginLeft: "auto" }}>PRO</span>
                 </div>
               )}
             </div>

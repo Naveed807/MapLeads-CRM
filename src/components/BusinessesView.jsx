@@ -244,6 +244,7 @@ export default function BusinessesView({
                 orgRole={orgRole}
                 onAssign={onAssign}
                 dark={dark}
+                planTier={planTier}
               />
             ))}
           </div>
