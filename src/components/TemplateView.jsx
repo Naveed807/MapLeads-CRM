@@ -19,6 +19,7 @@ export default function TemplateView({ template, onTemplateSave, templates, onSa
   const [saveName,  setSaveName]  = useState("");
   const [savedOk,   setSavedOk]   = useState(false);
   const [namedOk,   setNamedOk]   = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   // Keep editor in sync when the active template changes externally
   // (e.g. after switching via library or on first load)
@@ -35,18 +36,28 @@ export default function TemplateView({ template, onTemplateSave, templates, onSa
 
   function insertVar(v) { setBody((b) => b + v); }
 
-  function handleSave() {
-    onTemplateSave(body);
-    setSavedOk(true);
-    setTimeout(() => setSavedOk(false), 2000);
+  async function handleSave() {
+    setSaveError("");
+    try {
+      await onTemplateSave(body);
+      setSavedOk(true);
+      setTimeout(() => setSavedOk(false), 2000);
+    } catch (err) {
+      setSaveError(err?.message || "Failed to save template.");
+    }
   }
 
-  function handleSaveNamed() {
+  async function handleSaveNamed() {
     if (!saveName.trim()) return;
-    onSaveNamed(saveName.trim(), body);
-    setSaveName("");
-    setNamedOk(true);
-    setTimeout(() => setNamedOk(false), 2000);
+    setSaveError("");
+    try {
+      await onSaveNamed(saveName.trim(), body);
+      setSaveName("");
+      setNamedOk(true);
+      setTimeout(() => setNamedOk(false), 2000);
+    } catch (err) {
+      setSaveError(err?.message || "Failed to save template.");
+    }
   }
 
   // Load a library template into the editor AND persist it as the active template
@@ -68,7 +79,10 @@ export default function TemplateView({ template, onTemplateSave, templates, onSa
         <div style={{ background: surface, borderRadius: 16, border: `1px solid ${border}`, overflow: "hidden" }}>
           <div style={{ padding: "16px 20px", borderBottom: `1px solid ${border}`, display: "flex", alignItems: "center", gap: 8 }}>
             <FileText size={15} color="#6366f1" />
-            <span style={{ fontWeight: 700, fontSize: 13, color: th }}>Active Template Editor</span>
+            <div>
+              <span style={{ fontWeight: 700, fontSize: 13, color: th }}>Active Template Editor</span>
+              <div style={{ fontSize: 11, color: ts, marginTop: 2 }}>One template is active at a time — click <strong style={{ color: th }}>Set as Active</strong> to use this editor’s content for WhatsApp messages.</div>
+            </div>
           </div>
 
           {/* Variable chips */}
@@ -94,6 +108,12 @@ export default function TemplateView({ template, onTemplateSave, templates, onSa
             </div>
           )}
 
+          {saveError && (
+            <div style={{ margin: "0 16px 12px", padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, color: "#dc2626", fontSize: 12, display: "flex", alignItems: "flex-start", gap: 8 }}>
+              <AlertCircle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
+              <span>{saveError}</span>
+            </div>
+          )}
           <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
             <button onClick={handleSave}
               style={{ background: savedOk ? "#16a34a" : "#6366f1", color: "#fff", border: "none", borderRadius: 10, padding: "10px 22px", fontWeight: 700, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, transition: "background 0.3s" }}>
