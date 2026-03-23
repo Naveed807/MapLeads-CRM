@@ -110,10 +110,15 @@ export const PLAN_HIGHLIGHTS = {
   FREELANCER: [
     "Includes all Basic features",
     "Priority support",
+    "Chrome extension for scrapping businesses from Google Maps",
+    "Build and download businesses in minutes",
   ],
   AGENCY: [
     "Includes all Freelancer features",
     "Dedicated account manager",
-    "Custom integrations on request",
+    "Chrome extension for scrapping businesses from Google Maps",
+    "Build and download businesses in minutes",
+    "Send businesses directly from Chrome extension to CRM",
   ],
 };
+
