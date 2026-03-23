@@ -90,15 +90,16 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  members       OrgMember[]
-  subscription  Subscription?
-  businesses    Business[]
-  templates     Template[]
-  importBatches ImportBatch[]
-  emailSetting  EmailSetting?
-  emailLogs     EmailLog[]
-  notifications Notification[]
-  contactLogs   ContactLog[]
+  members         OrgMember[]
+  subscription     Subscription?
+  businesses       Business[]
+  templates        Template[]
+  importBatches    ImportBatch[]
+  importUsageLogs  ImportUsageLog[]
+  emailSetting     EmailSetting?
+  emailLogs        EmailLog[]
+  notifications    Notification[]
+  contactLogs      ContactLog[]
 
   @@index([slug])
 }
@@ -281,6 +282,20 @@ model ImportBatch {
   businesses Business[]
 
   @@index([orgId, importedAt])
+}
+
+// Deletion-immune import usage log — counts businesses imported per billing cycle.
+// Never decremented when batches or businesses are deleted.
+model ImportUsageLog {
+  id         String   @id @default(cuid())
+  count      Int      // number of businesses actually added (not skipped)
+  cycleStart DateTime // billing cycle start this entry belongs to
+  importedAt DateTime @default(now())
+
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, cycleStart])
 }
 
 // ─── TEMPLATES ────────────────────────────────────────────────────────────────

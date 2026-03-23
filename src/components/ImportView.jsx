@@ -1,11 +1,12 @@
-﻿import { useState, useRef } from "react";
+﻿import { useState, useRef, useEffect } from "react";
 import { parseGoogleMapsHTML } from "../utils/parseGoogleMaps";
 import { parseExcelFile, generateExcelTemplate } from "../utils/parseExcel";
 import { COUNTRY_CODES } from "../constants";
 import { toast } from "../utils/dialog";
+import { importApi } from "../services/crmApi";
 import {
   Upload, FileCode, X, CheckCircle, AlertCircle, History,
-  Globe, Trash2, FileSpreadsheet, Download, Map,
+  Globe, Trash2, FileSpreadsheet, Download, Map, TrendingUp, Zap,
 } from "lucide-react";
 
 // --- Import History Panel ---
@@ -46,7 +47,7 @@ function ImportHistoryPanel({ history, onDeleteImport, dark }) {
 
 // --- Main ImportView ---
 
-export default function ImportView({ onImport, onDeleteImport, importHistory, countryCode, onCountryCodeChange, dark }) {
+export default function ImportView({ onImport, onDeleteImport, importHistory, countryCode, onCountryCodeChange, dark, planTier }) {
   const [mode,     setMode]     = useState("maps");
 
   const [html,     setHtml]     = useState("");
@@ -63,6 +64,19 @@ export default function ImportView({ onImport, onDeleteImport, importHistory, co
   const [xlResult,      setXlResult]      = useState(null);
   const [xlDragging,    setXlDragging]    = useState(false);
   const fileInputRef = useRef(null);
+
+  // Import quota usage
+  const [usage, setUsage] = useState(null);
+  useEffect(() => {
+    importApi.getUsage()
+      .then(data => setUsage(data))
+      .catch(() => {});
+  }, []);
+
+  // Re-fetch usage after a successful import
+  function refreshUsage() {
+    importApi.getUsage().then(data => setUsage(data)).catch(() => {});
+  }
 
   const th = dark ? "#e2e8f0" : "#0f172a";
   const ts = dark ? "#94a3b8" : "#64748b";
@@ -88,6 +102,7 @@ export default function ImportView({ onImport, onDeleteImport, importHistory, co
     setLoading(false);
     setResult({ added, skipped });
     setHtml(""); setPreview(null);
+    refreshUsage();
     if (added > 0) {
       toast.success(`Imported ${added} business${added === 1 ? "" : "es"}${skipped ? ` (${skipped} skipped)` : ""}.`);
     } else {
@@ -131,6 +146,7 @@ export default function ImportView({ onImport, onDeleteImport, importHistory, co
     setXlResult({ added, skipped });
     setXlFile(null); setXlPreview(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+    refreshUsage();
     if (added > 0) {
       toast.success(`Imported ${added} business${added === 1 ? "" : "es"}${skipped ? ` (${skipped} skipped)` : ""}.`);
     } else {
@@ -146,6 +162,79 @@ export default function ImportView({ onImport, onDeleteImport, importHistory, co
         </h2>
         <p style={{ color: ts, marginTop: 6, fontSize: 14 }}>Import from Google Maps or upload an Excel / CSV file.</p>
       </div>
+
+      {/* ─── Quota usage card ──────────────────────────────────────────────── */}
+      {usage && (
+        <div style={{ background: surface, borderRadius: 14, border: `1px solid ${border}`, padding: "14px 18px", marginBottom: 20 }}>
+          {usage.limit === -1 ? (
+            /* Unlimited plan */
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <Zap size={16} color="#6366f1" fill="#6366f1" />
+              <div>
+                <span style={{ fontWeight: 700, fontSize: 13, color: th }}>Unlimited imports</span>
+                <span style={{ fontSize: 12, color: ts, marginLeft: 8 }}>Your {usage.planTier} plan has no import limit.</span>
+              </div>
+            </div>
+          ) : (() => {
+            const pct     = Math.min(100, Math.round((usage.used / usage.limit) * 100));
+            const isAlmost = pct >= 80 && pct < 100;
+            const isFull   = usage.remaining === 0;
+            const barColor = isFull ? "#ef4444" : isAlmost ? "#f59e0b" : "#6366f1";
+            const cycleLabel = usage.planTier === "BASIC"
+              ? `Resets ${new Date(new Date(usage.cycleStart).getFullYear(), new Date(usage.cycleStart).getMonth() + 1, 1).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`
+              : `Cycle started ${new Date(usage.cycleStart).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
+            return (
+              <div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8, gap: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    {isFull
+                      ? <AlertCircle size={15} color="#ef4444" />
+                      : isAlmost
+                        ? <AlertCircle size={15} color="#f59e0b" />
+                        : <TrendingUp size={15} color="#6366f1" />}
+                    <span style={{ fontWeight: 700, fontSize: 13, color: isFull ? "#ef4444" : th }}>
+                      {isFull ? "Import limit reached" : "Import quota"}
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <span style={{ fontSize: 12, color: ts }}>{cycleLabel}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: barColor }}>
+                      {usage.used} <span style={{ fontWeight: 400, color: ts }}>/ {usage.limit}</span>
+                    </span>
+                  </div>
+                </div>
+                {/* Progress bar */}
+                <div style={{ height: 7, borderRadius: 99, background: dark ? "#0f172a" : "#f1f5f9", overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${pct}%`, background: barColor, borderRadius: 99, transition: "width 0.4s ease" }} />
+                </div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 6 }}>
+                  <span style={{ fontSize: 11, color: ts }}>
+                    {isFull
+                      ? "You have used all your import slots this cycle. Deleting batches does not restore quota."
+                      : `${usage.remaining} business${usage.remaining !== 1 ? "es" : ""} remaining this cycle`}
+                  </span>
+                  {(isFull || isAlmost) && (
+                    <button
+                      style={{ fontSize: 11, fontWeight: 700, color: "#6366f1", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline", whiteSpace: "nowrap" }}
+                      onClick={() => {}}>
+                      Upgrade plan &rarr;
+                    </button>
+                  )}
+                </div>
+                {isFull && (
+                  <div style={{ marginTop: 10, padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, color: "#dc2626", fontSize: 12, display: "flex", alignItems: "center", gap: 8 }}>
+                    <AlertCircle size={13} />
+                    <span>
+                      <strong>Limit reached.</strong> Your {usage.planTier} plan allows {usage.limit} businesses per billing cycle.
+                      Upgrade to <strong>Freelancer</strong> (500/cycle) or <strong>Agency</strong> (unlimited) to continue importing.
+                    </span>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        </div>
+      )}
 
       <div style={{ display: "flex", gap: 0, background: dark ? "#0f172a" : "#f1f5f9", borderRadius: 12, padding: 4, marginBottom: 20, width: "fit-content" }}>
         {[

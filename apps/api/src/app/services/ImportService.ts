@@ -1,6 +1,7 @@
 import { prisma } from '../../config/database';
 import { businessRepository } from '../repositories/BusinessRepository';
 import { importRepository } from '../repositories/ImportRepository';
+import { importUsageLogRepository } from '../repositories/ImportUsageLogRepository';
 import { PLAN_LIMITS } from '../../config/plans';
 import { PlanLimitError, AppError } from '../errors/AppError';
 import { startOfMonth } from '../../utils/date';
@@ -19,16 +20,22 @@ interface RawBusiness {
 }
 
 export class ImportService {
-  async importFromMaps(orgId: string, businesses: RawBusiness[], planTier: string) {
-    await this.assertImportLimit(orgId, planTier);
+  async importFromMaps(orgId: string, businesses: RawBusiness[], planTier: string, periodStart?: Date) {
+    const cycleStart = this.computeCycleStart(planTier, periodStart);
+    await this.assertImportCycleLimit(orgId, planTier, cycleStart, businesses.length);
     await this.assertBusinessLimit(orgId, businesses.length, planTier);
-    return this.processImport(orgId, businesses, 'google_maps');
+    const result = await this.processImport(orgId, businesses, 'google_maps');
+    await importUsageLogRepository.create(orgId, result.added, cycleStart);
+    return result;
   }
 
-  async importFromExcel(orgId: string, businesses: RawBusiness[], planTier: string) {
-    await this.assertImportLimit(orgId, planTier);
+  async importFromExcel(orgId: string, businesses: RawBusiness[], planTier: string, periodStart?: Date) {
+    const cycleStart = this.computeCycleStart(planTier, periodStart);
+    await this.assertImportCycleLimit(orgId, planTier, cycleStart, businesses.length);
     await this.assertBusinessLimit(orgId, businesses.length, planTier);
-    return this.processImport(orgId, businesses, 'excel');
+    const result = await this.processImport(orgId, businesses, 'excel');
+    await importUsageLogRepository.create(orgId, result.added, cycleStart);
+    return result;
   }
 
   async getHistory(orgId: string) {
@@ -42,6 +49,24 @@ export class ImportService {
     }
     await importRepository.deleteWithBusinesses(batchId, orgId);
     await businessRepository.invalidateOrgCache(orgId);
+  }
+
+  /**
+   * Returns current-cycle usage stats for the UI.
+   * cycleStart / limit depends on plan tier and subscription period.
+   */
+  async getUsage(orgId: string, planTier: string, periodStart?: Date) {
+    const limits     = PLAN_LIMITS[planTier as keyof typeof PLAN_LIMITS];
+    const cycleStart = this.computeCycleStart(planTier, periodStart);
+    const limit      = limits?.maxImportsPerCycle ?? 100;
+
+    if (limit === -1) {
+      return { used: 0, limit: -1, remaining: -1, cycleStart, planTier };
+    }
+
+    const used      = await importUsageLogRepository.sumSinceCycleStart(orgId, cycleStart);
+    const remaining = Math.max(0, limit - used);
+    return { used, limit, remaining, cycleStart, planTier };
   }
 
   private async processImport(orgId: string, businesses: RawBusiness[], source: string) {
@@ -107,17 +132,59 @@ export class ImportService {
     return { added: toAdd.length, skipped, batchId: batch.id };
   }
 
-  private async assertImportLimit(orgId: string, planTier: string): Promise<void> {
-    const limits = PLAN_LIMITS[planTier as keyof typeof PLAN_LIMITS];
-    if (!limits || limits.maxImportsPerMonth === -1) return;
+  /**
+   * Billing cycle start:
+   *  - BASIC      → first day of the current calendar month
+   *  - FREELANCER → subscription period start (rolling date)
+   *  - AGENCY     → not relevant (unlimited), but returns period start if provided
+   */
+  private computeCycleStart(planTier: string, periodStart?: Date): Date {
+    if (planTier === 'BASIC' || !periodStart) {
+      return startOfMonth(new Date());
+    }
+    // Normalise to midnight UTC to ensure consistent key matching
+    const d = new Date(periodStart);
+    d.setUTCHours(0, 0, 0, 0);
+    return d;
+  }
 
-    const count = await importRepository.countThisMonth(orgId, startOfMonth(new Date()));
-    if (count >= limits.maxImportsPerMonth) {
+  /**
+   * Throws IMPORT_LIMIT_EXCEEDED if the org has consumed (or would exceed)
+   * its businesses-per-cycle quota.  Deletion of batches/businesses does NOT
+   * reduce the counter — limits are based on ImportUsageLog which is append-only.
+   */
+  private async assertImportCycleLimit(
+    orgId: string,
+    planTier: string,
+    cycleStart: Date,
+    incomingCount: number,
+  ): Promise<void> {
+    const limits = PLAN_LIMITS[planTier as keyof typeof PLAN_LIMITS];
+    if (!limits || limits.maxImportsPerCycle === -1) return; // unlimited
+
+    const used      = await importUsageLogRepository.sumSinceCycleStart(orgId, cycleStart);
+    const limit     = limits.maxImportsPerCycle;
+    const remaining = limit - used;
+
+    if (remaining <= 0) {
       throw new PlanLimitError(
         'IMPORT_LIMIT_EXCEEDED',
-        `You've reached your monthly import limit of ${limits.maxImportsPerMonth}. Upgrade to import more.`,
+        `Your ${planTier} plan allows ${limit} businesses per billing cycle and you have used all ${used}. ` +
+        `Upgrade your plan to import more.`,
       );
     }
+
+    if (incomingCount > remaining) {
+      throw new PlanLimitError(
+        'IMPORT_LIMIT_EXCEEDED',
+        `This import contains ${incomingCount} businesses but only ${remaining} import slot${remaining !== 1 ? 's' : ''} ` +
+        `remain this cycle (${used}/${limit} used). Reduce the import size or upgrade your plan.`,
+      );
+    }
+  }
+
+  private async assertImportLimit(orgId: string, planTier: string): Promise<void> {
+    // Legacy stub kept to avoid unused-import errors — new code uses assertImportCycleLimit
   }
 
   private async assertBusinessLimit(orgId: string, incomingCount: number, planTier: string): Promise<void> {

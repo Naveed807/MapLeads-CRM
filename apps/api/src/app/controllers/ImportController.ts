@@ -10,9 +10,10 @@ export class ImportController {
    * Body: { businesses: RawBusiness[], source: 'google_maps' | 'excel' }
    */
   async importBusinesses(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const orgId    = req.org!.id;
-    const userId   = req.user!.id;
-    const planTier = (req.org!.subscription?.plan as any)?.tier ?? 'BASIC';
+    const orgId       = req.org!.id;
+    const userId      = req.user!.id;
+    const planTier    = (req.org!.subscription?.plan as any)?.tier ?? 'BASIC';
+    const periodStart = req.org!.subscription?.currentPeriodStart ?? undefined;
     const { businesses, source = 'google_maps' } = req.body;
 
     try {
@@ -21,8 +22,8 @@ export class ImportController {
       }
 
       const result = source === 'excel'
-        ? await importService.importFromExcel(orgId, businesses, planTier)
-        : await importService.importFromMaps(orgId, businesses, planTier);
+        ? await importService.importFromExcel(orgId, businesses, planTier, periodStart)
+        : await importService.importFromMaps(orgId, businesses, planTier, periodStart);
 
       const sourceLabel = source === 'excel' ? 'Excel' : 'Google Maps';
       notificationService.create(
@@ -38,7 +39,7 @@ export class ImportController {
       res.status(201).json(ok(result, `Imported ${result.added} businesses`));
     } catch (e: any) {
       if (e.code === 'IMPORT_LIMIT_EXCEEDED') {
-        notificationService.create(orgId, 'IMPORT_LIMIT_REACHED', 'Monthly import limit reached', e.message, undefined, userId).catch(() => {});
+        notificationService.create(orgId, 'IMPORT_LIMIT_REACHED', 'Import limit reached', e.message, undefined, userId).catch(() => {});
       } else if (e.code === 'BUSINESS_LIMIT_EXCEEDED') {
         notificationService.create(orgId, 'BUSINESS_LIMIT_REACHED', 'Business storage limit reached', e.message, undefined, userId).catch(() => {});
       } else {
@@ -52,6 +53,15 @@ export class ImportController {
     try {
       const history = await importService.getHistory(req.org!.id);
       res.json(ok(history));
+    } catch (e) { next(e); }
+  }
+
+  async getUsage(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const planTier    = (req.org!.subscription?.plan as any)?.tier ?? 'BASIC';
+      const periodStart = req.org!.subscription?.currentPeriodStart ?? undefined;
+      const usage = await importService.getUsage(req.org!.id, planTier, periodStart);
+      res.json(ok(usage));
     } catch (e) { next(e); }
   }
 

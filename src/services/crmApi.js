@@ -103,6 +103,8 @@ export const importApi = {
     request('/imports', { method: 'POST', body: JSON.stringify({ businesses, source }) }),
   getHistory: () => request('/imports'),
   deleteBatch: (id) => request(`/imports/${id}`, { method: 'DELETE' }),
+  /** Current billing-cycle usage: { used, limit, remaining, cycleStart, planTier } */
+  getUsage: () => request('/imports/usage'),
 };
 
 // ─── Templates ────────────────────────────────────────────────────────────────
@@ -161,7 +163,7 @@ export const teamApi = {
 
 // ─── Plan limits (client-side mirror of PLAN_LIMITS) ─────────────────────────
 export const PLAN_LIMITS = {
-  BASIC:      { maxBusinesses: 100,   maxImportsPerMonth: 3,  maxTeamMembers: 1,  canUseBulkActions: false, canExportCsv: false, canUseEmailjs: false, canUseReminders: false },
-  FREELANCER: { maxBusinesses: 2000,  maxImportsPerMonth: 30, maxTeamMembers: 3,  canUseBulkActions: true,  canExportCsv: true,  canUseEmailjs: true,  canUseReminders: true  },
-  AGENCY:     { maxBusinesses: -1,    maxImportsPerMonth: -1, maxTeamMembers: 25, canUseBulkActions: true,  canExportCsv: true,  canUseEmailjs: true,  canUseReminders: true  },
+  BASIC:      { maxBusinesses: 100,   maxImportsPerCycle: 100, maxTeamMembers: 1,  canUseBulkActions: false, canExportCsv: false, canUseEmailjs: false, canUseReminders: false },
+  FREELANCER: { maxBusinesses: 2000,  maxImportsPerCycle: 500, maxTeamMembers: 3,  canUseBulkActions: true,  canExportCsv: true,  canUseEmailjs: true,  canUseReminders: true  },
+  AGENCY:     { maxBusinesses: -1,    maxImportsPerCycle: -1,  maxTeamMembers: 25, canUseBulkActions: true,  canExportCsv: true,  canUseEmailjs: true,  canUseReminders: true  },
 };

@@ -6,6 +6,7 @@ import {
   RefreshCw, UserMinus, ClipboardList,
 } from "lucide-react";
 import { teamApi, PLAN_LIMITS } from "../services/crmApi";
+import { swalConfirm } from "../utils/dialog";
 
 // ─── Role config ─────────────────────────────────────────────────────────────
 const ROLE_CONFIG = {
@@ -318,7 +319,13 @@ function MemberCard({ member, isSelf, canManage, businesses, onRoleChange, onRem
   const cfg = ROLE_CONFIG[member.role] || ROLE_CONFIG.MEMBER;
 
   const handleRemove = async () => {
-    if (!window.confirm(`Remove ${member.user?.name} from the organization?`)) return;
+    const confirmed = await swalConfirm({
+      title:       `Remove ${member.user?.name}?`,
+      text:        "This will remove them from the organization. They will lose access immediately.",
+      type:        "danger",
+      confirmText: "Yes, remove",
+    });
+    if (!confirmed) return;
     setRemoving(true);
     try { await onRemove(member.userId); }
     catch (err) { alert(err.message); setRemoving(false); }

@@ -6,6 +6,7 @@ import { tenantMiddleware }  from '../../app/middleware/tenant';
 const router = Router();
 router.use(authMiddleware, tenantMiddleware);
 
+router.get('/usage', importController.getUsage.bind(importController));
 router.get('/',    importController.getHistory.bind(importController));
 router.post('/',   importController.importBusinesses.bind(importController));   // pre-parsed businesses array
 router.delete('/:id', importController.deleteBatch.bind(importController));

@@ -643,6 +643,7 @@ function CRMApp() {
                 countryCode={countryCode}
                 onCountryCodeChange={handleCountryCodeChange}
                 dark={dark}
+                planTier={planTier}
               />
             )}
 
