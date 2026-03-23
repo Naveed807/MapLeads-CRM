@@ -10,7 +10,7 @@ import { billingApi } from "../services/crmApi";
 // ─── Feature rows shown on every plan card ────────────────────────────────────
 const FEATURE_ROWS = [
   { key: "maxBusinesses",      label: "Businesses",         fmt: v => v === -1 ? "Unlimited" : v.toLocaleString(),     Icon: Building2   },
-  { key: "maxImportsPerCycle", label: "Imports / cycle",    fmt: v => v === -1 ? "Unlimited" : v.toLocaleString(),     Icon: Upload      },
+  { key: "maxImportsPerMonth",  label: "Imports / month",    fmt: v => v === -1 ? "Unlimited" : v.toLocaleString(),     Icon: Upload      },
   { key: "maxTeamMembers",     label: "Team members",       fmt: v => v === -1 ? "Unlimited" : String(v),              Icon: Users       },
   { key: "maxTemplates",       label: "Templates",          fmt: v => v === -1 ? "Unlimited" : String(v),              Icon: FileText    },
   { key: "canExportCsv",       label: "CSV Export",         fmt: null,                                                  Icon: Download    },
@@ -290,7 +290,7 @@ export default function PricingView({ dark, planTier }) {
                   {FEATURE_ROWS.map(({ key, label, fmt, Icon: FIcon }) => {
                     const val     = plan[key];
                     const isNum   = fmt !== null;
-                    const enabled = isNum ? true : !!val;
+                    const enabled = isNum ? (val != null) : !!val;
                     return (
                       <div key={key} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <div style={{ width: 18, height: 18, borderRadius: 5, background: enabled ? (meta.color + "22") : (dark ? "#1e293b" : "#f1f5f9"), display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -299,7 +299,7 @@ export default function PricingView({ dark, planTier }) {
                             : <X     size={11} color={dark ? "#475569" : "#cbd5e1"} strokeWidth={2.5} />}
                         </div>
                         <span style={{ fontSize: 12, color: enabled ? th : ts, flex: 1 }}>{label}</span>
-                        {isNum && (
+                        {isNum && val != null && (
                           <span style={{ fontSize: 12, fontWeight: 700, color: meta.color }}>{fmt(val)}</span>
                         )}
                       </div>
