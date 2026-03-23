@@ -684,6 +684,7 @@ function CRMApp() {
                 onDeleteTemplate={handleDeleteTemplate}
                 onUseTemplate={handleUseTemplate}
                 dark={dark}
+                planTier={planTier}
               />
             )}
 

@@ -30,7 +30,7 @@ export const PLAN_LIMITS: Record<PlanTier, PlanConfig> = {
     maxBusinesses:             2_000,
     maxImportsPerCycle:        500,   // 500 businesses / subscription cycle
     maxTeamMembers:            3,
-    maxTemplates:              20,
+    maxTemplates:              10,
     canExportCsv:              true,
     canUseEmailjs:             true,
     canUseReminders:           true,
@@ -76,7 +76,7 @@ export const PLAN_SEED_DATA = [
     maxBusinesses:        2000,
     maxImportsPerMonth:   500,
     maxTeamMembers:       3,
-    maxTemplates:         20,
+    maxTemplates:         10,
     canExportCsv:         true,
     canUseEmailjs:        true,
     canUseReminders:      true,

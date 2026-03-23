@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { FileText, Save, Trash2, Check, Plus, MessageSquare, ChevronRight } from "lucide-react";
+import { FileText, Save, Trash2, Check, Plus, MessageSquare, ChevronRight, AlertCircle } from "lucide-react";
+import { PLAN_LIMITS } from "../services/crmApi";
 
 const VARS_HELP = [
   { v: "{{name}}",     d: "Business name" },
@@ -9,7 +10,11 @@ const VARS_HELP = [
   { v: "{{rating}}",   d: "Google rating" },
 ];
 
-export default function TemplateView({ template, onTemplateSave, templates, onSaveNamed, onDeleteTemplate, onUseTemplate, dark }) {
+export default function TemplateView({ template, onTemplateSave, templates, onSaveNamed, onDeleteTemplate, onUseTemplate, dark, planTier }) {
+  const planLimits    = PLAN_LIMITS[planTier] ?? PLAN_LIMITS.BASIC;
+  const templateLimit = planLimits.maxTemplates; // -1 = unlimited
+  const templateCount = (templates || []).length;
+  const atLimit       = templateLimit !== -1 && templateCount >= templateLimit;
   const [body,      setBody]      = useState(template || "Hello {{name}},\n\nWe'd love to offer you our services.\n\nBest regards");
   const [saveName,  setSaveName]  = useState("");
   const [savedOk,   setSavedOk]   = useState(false);
@@ -100,9 +105,10 @@ export default function TemplateView({ template, onTemplateSave, templates, onSa
                 placeholder="Template name…"
                 onKeyDown={(e) => e.key === "Enter" && handleSaveNamed()}
                 style={{ flex: 1, padding: "9px 12px", borderRadius: 8, border: `1px solid ${border}`, fontSize: 13, color: dark ? "#e2e8f0" : "#334155", background: inputBg, outline: "none" }} />
-              <button onClick={handleSaveNamed} disabled={!saveName.trim()}
-                style={{ background: namedOk ? "#16a34a" : "#0f172a", color: "#fff", border: "none", borderRadius: 8, padding: "9px 14px", fontWeight: 700, fontSize: 13, cursor: saveName.trim() ? "pointer" : "not-allowed", opacity: saveName.trim() ? 1 : 0.4, display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
-                {namedOk ? <Check size={14} /> : <Plus size={14} />}{namedOk ? "Saved!" : "Save to Library"}
+              <button onClick={handleSaveNamed} disabled={!saveName.trim() || atLimit}
+                title={atLimit ? `Template limit reached (${templateCount}/${templateLimit})` : undefined}
+                style={{ background: namedOk ? "#16a34a" : (atLimit ? (dark ? "#374151" : "#e5e7eb") : "#0f172a"), color: atLimit ? (dark ? "#6b7280" : "#9ca3af") : "#fff", border: "none", borderRadius: 8, padding: "9px 14px", fontWeight: 700, fontSize: 13, cursor: (saveName.trim() && !atLimit) ? "pointer" : "not-allowed", opacity: saveName.trim() && !atLimit ? 1 : 0.5, display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
+                {namedOk ? <Check size={14} /> : <Plus size={14} />}{namedOk ? "Saved!" : (atLimit ? "Limit reached" : "Save to Library")}
               </button>
             </div>
           </div>
@@ -113,8 +119,20 @@ export default function TemplateView({ template, onTemplateSave, templates, onSa
           <div style={{ padding: "16px 20px", borderBottom: `1px solid ${border}`, display: "flex", alignItems: "center", gap: 8 }}>
             <FileText size={15} color="#6366f1" />
             <span style={{ fontWeight: 700, fontSize: 13, color: th }}>Template Library</span>
-            <span style={{ marginLeft: "auto", background: purpleBg, color: "#6366f1", borderRadius: 20, fontSize: 11, fontWeight: 700, padding: "2px 8px" }}>{(templates || []).length}</span>
+            <span style={{ marginLeft: "auto", background: atLimit ? "#fef2f2" : purpleBg, color: atLimit ? "#ef4444" : "#6366f1", borderRadius: 20, fontSize: 11, fontWeight: 700, padding: "2px 8px" }}>
+              {templateLimit === -1 ? templateCount : `${templateCount} / ${templateLimit}`}
+            </span>
           </div>
+          {atLimit && (
+            <div style={{ margin: "12px 16px 0", padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, color: "#dc2626", fontSize: 12, display: "flex", alignItems: "flex-start", gap: 8 }}>
+              <AlertCircle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
+              <span>
+                <strong>Template limit reached.</strong> Your {planTier || "Basic"} plan allows {templateLimit} saved template{templateLimit !== 1 ? "s" : ""}.
+                {planTier !== "FREELANCER" && planTier !== "AGENCY" && <> Upgrade to <strong>Freelancer</strong> (10) or <strong>Agency</strong> (unlimited).</>}
+                {planTier === "FREELANCER" && <> Upgrade to <strong>Agency</strong> for unlimited templates.</>}
+              </span>
+            </div>
+          )}
 
           {(!templates || templates.length === 0) && (
             <div style={{ padding: 28, textAlign: "center", color: ts, fontSize: 13 }}>

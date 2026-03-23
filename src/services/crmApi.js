@@ -163,7 +163,7 @@ export const teamApi = {
 
 // ─── Plan limits (client-side mirror of PLAN_LIMITS) ─────────────────────────
 export const PLAN_LIMITS = {
-  BASIC:      { maxBusinesses: 100,   maxImportsPerCycle: 100, maxTeamMembers: 1,  canUseBulkActions: false, canExportCsv: false, canUseEmailjs: false, canUseReminders: false },
-  FREELANCER: { maxBusinesses: 2000,  maxImportsPerCycle: 500, maxTeamMembers: 3,  canUseBulkActions: true,  canExportCsv: true,  canUseEmailjs: true,  canUseReminders: true  },
-  AGENCY:     { maxBusinesses: -1,    maxImportsPerCycle: -1,  maxTeamMembers: 25, canUseBulkActions: true,  canExportCsv: true,  canUseEmailjs: true,  canUseReminders: true  },
+  BASIC:      { maxBusinesses: 100,   maxImportsPerCycle: 100, maxTeamMembers: 1,  maxTemplates: 2,  canUseBulkActions: false, canExportCsv: false, canUseEmailjs: false, canUseReminders: false },
+  FREELANCER: { maxBusinesses: 2000,  maxImportsPerCycle: 500, maxTeamMembers: 3,  maxTemplates: 10, canUseBulkActions: true,  canExportCsv: true,  canUseEmailjs: true,  canUseReminders: true  },
+  AGENCY:     { maxBusinesses: -1,    maxImportsPerCycle: -1,  maxTeamMembers: 25, maxTemplates: -1, canUseBulkActions: true,  canExportCsv: true,  canUseEmailjs: true,  canUseReminders: true  },
 };
