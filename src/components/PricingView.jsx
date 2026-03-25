@@ -6,7 +6,7 @@ import {
   HelpCircle, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { billingApi } from "../services/crmApi";
-import { FEATURE_ROWS, PLAN_DESCRIPTIONS, PLAN_HIGHLIGHTS } from "../constants/planFeatures";
+import { FEATURE_ROWS, PLAN_DESCRIPTIONS, PLAN_HIGHLIGHTS, PKR_PRICES } from "../constants/planFeatures";
 
 // ─── Icon map — add here if you add new icons in planFeatures.js ──────────────
 // ─── Icon map — add here if you add new icons in planFeatures.js ──────────────
@@ -88,6 +88,7 @@ export default function PricingView({ dark, planTier }) {
   const [portalLoading,   setPortalLoading]   = useState(false);
   const [error,           setError]           = useState("");
   const [successMsg,      setSuccessMsg]      = useState("");
+  const [showPkr,         setShowPkr]         = useState(false);
 
   // Detect Stripe redirect outcome in URL
   useEffect(() => {
@@ -169,11 +170,30 @@ export default function PricingView({ dark, planTier }) {
     <div style={{ maxWidth: 960, margin: "0 auto" }}>
 
       {/* ── Page header ──────────────────────────────────────────────────── */}
-      <div style={{ marginBottom: 28 }}>
-        <h2 style={{ fontSize: 22, fontWeight: 800, color: th, margin: "0 0 6px", display: "flex", alignItems: "center", gap: 8 }}>
-          <CreditCard size={20} color="#6366f1" />Plans & Billing
-        </h2>
-        <p style={{ color: ts, margin: 0, fontSize: 14 }}>Manage your subscription and payment methods. Stripe processes all payments securely.</p>
+      <div style={{ marginBottom: 28, display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <h2 style={{ fontSize: 22, fontWeight: 800, color: th, margin: "0 0 6px", display: "flex", alignItems: "center", gap: 8 }}>
+            <CreditCard size={20} color="#6366f1" />Plans & Billing
+          </h2>
+          <p style={{ color: ts, margin: 0, fontSize: 14 }}>Manage your subscription and payment methods.</p>
+        </div>
+        {/* Currency toggle */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6, background: dark ? "#1e293b" : "#f1f5f9", borderRadius: 10, padding: "4px", border: `1px solid ${border}` }}>
+          <button
+            onClick={() => setShowPkr(false)}
+            style={{ padding: "5px 12px", borderRadius: 7, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700,
+              background: !showPkr ? (dark ? "#334155" : "#fff") : "transparent",
+              color: !showPkr ? th : ts,
+              boxShadow: !showPkr ? "0 1px 3px rgba(0,0,0,0.1)" : "none" }}
+          >$ USD</button>
+          <button
+            onClick={() => setShowPkr(true)}
+            style={{ padding: "5px 12px", borderRadius: 7, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700,
+              background: showPkr ? (dark ? "#334155" : "#fff") : "transparent",
+              color: showPkr ? th : ts,
+              boxShadow: showPkr ? "0 1px 3px rgba(0,0,0,0.1)" : "none" }}
+          >🇵🇰 PKR</button>
+        </div>
       </div>
 
       {/* ── Success / error banners ───────────────────────────────────────── */}
@@ -270,14 +290,29 @@ export default function PricingView({ dark, planTier }) {
                 {PLAN_DESCRIPTIONS[plan.tier] && (
                   <p style={{ fontSize: 12, color: ts, margin: "0 0 10px" }}>{PLAN_DESCRIPTIONS[plan.tier]}</p>
                 )}
-                <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-                  <span style={{ fontSize: 32, fontWeight: 900, color: meta.color }}>
-                    {plan.monthlyPriceUsd ? `$${(plan.monthlyPriceUsd / 100).toFixed(0)}` : "Free"}
-                  </span>
-                  {plan.monthlyPriceUsd > 0 && <span style={{ fontSize: 13, color: ts }}>/month</span>}
-                </div>
-                {plan.monthlyPriceUsd > 0 && (
-                  <p style={{ fontSize: 11, color: ts, margin: "4px 0 0" }}>Billed monthly. Cancel anytime.</p>
+                {showPkr ? (
+                  <div>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+                      <span style={{ fontSize: 28, fontWeight: 900, color: meta.color }}>
+                        {PKR_PRICES[plan.tier]?.label ?? "Free"}
+                      </span>
+                    </div>
+                    {(PKR_PRICES[plan.tier]?.amount ?? 0) > 0 && (
+                      <p style={{ fontSize: 11, color: ts, margin: "4px 0 0" }}>Paid via JazzCash / bank transfer. Manual verification.</p>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+                      <span style={{ fontSize: 32, fontWeight: 900, color: meta.color }}>
+                        {plan.monthlyPriceUsd ? `$${(plan.monthlyPriceUsd / 100).toFixed(0)}` : "Free"}
+                      </span>
+                      {plan.monthlyPriceUsd > 0 && <span style={{ fontSize: 13, color: ts }}>/month</span>}
+                    </div>
+                    {plan.monthlyPriceUsd > 0 && (
+                      <p style={{ fontSize: 11, color: ts, margin: "4px 0 0" }}>Billed monthly. Cancel anytime.</p>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -320,6 +355,19 @@ export default function PricingView({ dark, planTier }) {
                   <button disabled style={{ width: "100%", padding: "11px", background: accentBg, color: meta.color, border: `1px solid ${meta.color}40`, borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: "not-allowed" }}>
                     ✓ Your Current Plan
                   </button>
+                ) : showPkr && (PKR_PRICES[plan.tier]?.amount ?? 0) > 0 ? (
+                  /* PKR manual payment button */
+                  <a
+                    href="mailto:billing@mapleads.io?subject=Plan Upgrade Request&body=Plan: ${plan.name}%0AAmount: ${PKR_PRICES[plan.tier]?.label}"
+                    style={{
+                      width: "100%", padding: "11px", background: meta.color, color: "#fff",
+                      border: "none", borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                      textDecoration: "none", boxSizing: "border-box",
+                    }}
+                  >
+                    Pay via Bank / JazzCash →
+                  </a>
                 ) : plan.stripePriceId ? (
                   <button
                     onClick={() => handleUpgrade(plan)}

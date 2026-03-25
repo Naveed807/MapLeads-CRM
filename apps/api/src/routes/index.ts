@@ -10,6 +10,7 @@ import accountRoutes      from './v1/account.routes';
 import notificationRoutes from './v1/notification.routes';
 import teamRoutes         from './v1/team.routes';
 import adminRoutes        from './admin.routes';
+import extensionRoutes    from './v1/extension.routes';
 
 const router = Router();
 
@@ -17,6 +18,7 @@ const router = Router();
 router.use('/v1/auth',          authRoutes);
 router.use('/v1/businesses',    businessRoutes);
 router.use('/v1/imports',       importRoutes);
+router.use('/v1/extension',     extensionRoutes);
 router.use('/v1/templates',     templateRoutes);
 router.use('/v1/email',         emailRoutes);
 router.use('/v1/dashboard',     dashboardRoutes);

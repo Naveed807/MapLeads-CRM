@@ -103,6 +103,16 @@ export const PLAN_DESCRIPTIONS = {
   AGENCY:     "Unlimited power for teams and agencies.",
 };
 
+// ─── Pakistani Rupee prices ───────────────────────────────────────────────────
+// Shown when user clicks the "🇵🇰 PKR" toggle on the pricing page.
+// Payments in PKR are collected manually (bank transfer / JazzCash).
+// Update these as exchange rates change.
+export const PKR_PRICES = {
+  BASIC:      { amount: 0,      label: "Free"           },
+  FREELANCER: { amount: 2499,   label: "Rs 2,499 / mo"  },
+  AGENCY:     { amount: 6999,  label: "Rs 6,999 / mo" },
+};
+
 // ─── Per-plan highlight bullets (shown before feature rows) ──────────────────
 // Set to [] to hide highlights for a plan.
 export const PLAN_HIGHLIGHTS = {
